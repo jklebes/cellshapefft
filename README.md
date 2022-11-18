@@ -28,7 +28,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You will need a version of matlab older than 2015. (Works fine with R2022a so far.  If I find incompatibilies, I will try to update - jk)
+You will need a version of matlab older than 2015. (Because MATLAB's GUI designer GUIDE was ended in 2015.  With newer MATLAB the app still runs as usual, but the GUI is not edittable in the same way - jk)
 Images should be either .png or .tiff .tif (stacks are okay)
 
 ### Installing
