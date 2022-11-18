@@ -1,7 +1,7 @@
 # Coarse-grained-anisotropy-and-size-using-FFT
 
 This folder contains all the codes needed to perform the analysis developed and described in the article: 
-    Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform
+    [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
 
 Abstract of the article:
 
