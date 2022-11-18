@@ -1,7 +1,7 @@
 # Coarse-grained-anisotropy-and-size-using-FFT
 
 This folder contains all the codes needed to perform the analysis developed and described in the article: 
-    Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform
+    [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
 
 Abstract of the article:
 
@@ -28,7 +28,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You will need a version of matlab older than 2015. (Works fine with R2022a so far.  If I find incompatibilies, I will try to update - jk)
+You will need a version of matlab older than 2015. (Because MATLAB's GUI designer GUIDE was ended in 2015.  With newer MATLAB the app still runs as usual, but the GUI is not edittable in the same way - jk)
 Images should be either .png or .tiff .tif (stacks are okay)
 
 ### Installing
