@@ -70,7 +70,7 @@ handles.Param.strel = 4;
 handles.Param.pas2 = 128;
 handles.Param.zoom = 6;
 
-handles.rec = (1-handles.Param.rec)*handles.Param.pas2;
+handles.rec = (1-handles.Param.overlap)*handles.Param.pas2; %done again by calculregion?
 handles.Param.nbpoints = 30;
 handles.Param.sizeview = 0;
 

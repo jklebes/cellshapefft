@@ -1,17 +1,23 @@
 function [Posi,regl,numX,numY] = Position_gui(Param)  
+%returns 
+%Posi a list of locations of subimages, 
+%reg1 number of possible submiages
+%numX, numY number of subimages in x and y directions
 
-
-
-rec = (1-Param.rec)*Param.pas2;                      % number of shared pixels between
-                                               % subimages
+%renamed
+%rec -> overlap
+%pas2 -> subwindow_size
+spacing = (1-Param.overlap)*Param.subwindow_size;  % number of shared pixels between
+                                                   % subimages
 Anamesi = cleanfolder(Param.name{1});
 
 Param.siz = size_image(Param.name{1},Anamesi);
 
 % The positions needed
+% possible starting positions of subimages
 
-AllX = 1:rec:(Param.siz(2)- Param.pas2);
-AllY = 1:rec:(Param.siz(1)- Param.pas2);
+AllX = 1:spacing:(Param.siz(2)- Param.subwindow_size);
+AllY = 1:spacing:(Param.siz(1)- Param.subwindow_size);
 % AllX = 1:rec:(Param.siz(2)- Param.pas2+1);
 % AllY = 1:rec:(Param.siz(1)- Param.pas2+1);
 %AllX = 1:rec:(Param.siz(2)- rec+1);

@@ -25,7 +25,7 @@ Param.pathin = {'C:\Users\Melina\Documents\DOCTORAT\Matlab\2A\CAMILLE\Probleme\3
  
 %% Parameters you should change and that are NOT tunable with the user interface
 
-Param.rec = 0.5;                % Overlap between the sliding boxes 
+Param.overlap = 0.5;                % Overlap between the sliding boxes 
 Param.tsart = 1;                % Beginning of the analysis
 Param.tleng = 5;               % End of the analysis
 Param.timestep = 1;         % Temporal average

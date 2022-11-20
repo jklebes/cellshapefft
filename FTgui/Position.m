@@ -46,7 +46,7 @@ function Results = Position(Param)
 
 
 
-    rec = (1-Param.rec)*Param.pas2;                      % number of shared pixels between
+    rec = (1-Param.overlap)*Param.pas2;                      % number of shared pixels between
                                                % subimages
         
     if isempty(Param.contour)                  % if no mask is required

@@ -66,7 +66,7 @@ Param.pathin should always be written this way. Be careful of the brakets and th
 
 
 ```
-Param.rec = 0.5;                % Overlap between boxes   
+Param.overlap = 0.5;                % Overlap between boxes   
 Param.tsart = 10;                % Begining of the analysis
 Param.tleng = 27;                % End of the analysis
 Param.timestep = 2;             % Time step on which to time average
