@@ -232,7 +232,7 @@ function recouvrement_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of recouvrement as text
 %        str2double(get(hObject,'String')) returns contents of recouvrement as a double
-handles.Param.rec = str2double(get(hObject,'String'));
+handles.Param.overlap = str2double(get(hObject,'String'));
 guidata(hObject, handles);
 
 % --- Executes during object creation, after setting all properties.
