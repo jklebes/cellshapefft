@@ -67,10 +67,10 @@ handles.Param.register = 0;
 handles.Param.propor = 0.1;
 handles.Param.sigma = 0.1;
 handles.Param.strel = 4;
-handles.Param.pas2 = 128;
+handles.Param.subwindow_size = 128;
 handles.Param.zoom = 6;
 
-handles.rec = (1-handles.Param.overlap)*handles.Param.pas2; %done again by calculregion?
+handles.rec = (1-handles.Param.overlap)*handles.Param.subwindow_size; %done again by calculregion?
 handles.Param.nbpoints = 30;
 handles.Param.sizeview = 0;
 
@@ -88,7 +88,7 @@ set(get(handles.filt1,'children'),'visible','off')
 set(get(handles.filt2,'children'),'visible','off')
 set(get(handles.filt3,'children'),'visible','off')
 
-KB=handles.Param.pas2^2*9.53674e-7*8;  
+KB=handles.Param.subwindow_size^2*9.53674e-7*8;  
 KBwhole  = KB*handles.regl;  
 set(handles.sizesub,'String',sprintf(['One image: ' num2str(floor(KBwhole)) ' MB']));
 % Update handles structure
@@ -166,8 +166,8 @@ if get(hObject,'Value')
     imshow(a)
     hold on 
     for win = 1:2:handles.regl
-       x = handles.Posi(win,1)+handles.Param.pas2/2;
-       y = handles.Posi(win,2)+handles.Param.pas2/2;
+       x = handles.Posi(win,1)+handles.Param.subwindow_size/2;
+       y = handles.Posi(win,2)+handles.Param.subwindow_size/2;
        text(x,y,num2str(win),'Color','yellow','FontSize',5);
     
     end
@@ -443,24 +443,24 @@ function window_Callback(hObject, eventdata, handles)
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
 nl = round(get(hObject,'Value'));
-% n = log(handles.Param.pas2)/log(2);
+% n = log(handles.Param.subwindow_size)/log(2);
 % if nl == n
 % else
    % set(hObject,'Value',nl);
-%    handles.Param.pas2 = 2^nl;
+%    handles.Param.subwindow_size = 2^nl;
  
-%handles.rec = 1/2*handles.Param.pas2;
+%handles.rec = 1/2*handles.Param.subwindow_size;
  
-    handles.Param.pas2 = nl;
-    if floor(handles.Param.pas2/2)==handles.Param.pas2/2
-        handles.rec = handles.Param.pas2/2;
+    handles.Param.subwindow_size = nl;
+    if floor(handles.Param.subwindow_size/2)==handles.Param.subwindow_size/2
+        handles.rec = handles.Param.subwindow_size/2;
      else
-         handles.rec = (handles.Param.pas2-1)/2;
+         handles.rec = (handles.Param.subwindow_size-1)/2;
     end
 
     handles = calculregion(handles);
     handles = affichim(handles);
-    KB=handles.Param.pas2^2/16*9.53674e-7*8;  
+    KB=handles.Param.subwindow_size^2/16*9.53674e-7*8;  
     KBwhole = KB*handles.regl;
     set(handles.sizesub,'String',sprintf(['One image: ' num2str(floor(KBwhole)) ' MB']))
     handles = affichim(handles);
@@ -471,7 +471,7 @@ nl = round(get(hObject,'Value'));
     handles = proporfft(handles);
     handles = affichproporfft(handles);
     handles = trace_defo(handles);
-    set(handles.enterwindow,'String',handles.Param.pas2);
+    set(handles.enterwindow,'String',handles.Param.subwindow_size);
     
     if get(handles.sizes,'Value') && get(handles.anisotrpy_ellipse,'Value')==0
 
@@ -516,7 +516,7 @@ guidata(hObject,handles);
 % % hObject    handle to pushwindow (see GCBO)
 % % eventdata  reserved - to be defined in a future version of MATLAB
 % % handles    structure with handles and user data (see GUIDATA)
-% set(handles.pushwindow,'String',handles.Param.pas2);
+% set(handles.pushwindow,'String',handles.Param.subwindow_size);
 % guidata(hObject,handles);
 
 
@@ -558,7 +558,7 @@ function OK_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 Val = get(hObject,'Value');
 if Val == 1
-   % Parameters = struct('propor',handles.propor,'cut',handles.cut,'strel',handles.strel,'sigma',handles.sigma,'pas2',handles.Param.pas2,'registering',handles.register);
+   % Parameters = struct('propor',handles.propor,'cut',handles.cut,'strel',handles.strel,'sigma',handles.sigma,'subwindow_size',handles.Param.subwindow_size,'registering',handles.register);
     Parameters=handles.Param;
     save([handles.Param.pathout,'Param.mat'],'Parameters');
     
@@ -718,9 +718,9 @@ function handles=calculregion(handles)
 function handles=fftcalculus(handles)
 % asubs contains the subimages we will use 
      FTs = avfft(handles.Param.name,handles.wins,handles.Param,handles.Posi);
-     handles.fftsub1 = reshape(FTs(1,:,:),handles.Param.pas2,handles.Param.pas2);
-    handles.fftsub2 = reshape(FTs(2,:,:),handles.Param.pas2,handles.Param.pas2);
-    handles.fftsub3 = reshape(FTs(3,:,:),handles.Param.pas2,handles.Param.pas2);
+     handles.fftsub1 = reshape(FTs(1,:,:),handles.Param.subwindow_size,handles.Param.subwindow_size);
+    handles.fftsub2 = reshape(FTs(2,:,:),handles.Param.subwindow_size,handles.Param.subwindow_size);
+    handles.fftsub3 = reshape(FTs(3,:,:),handles.Param.subwindow_size,handles.Param.subwindow_size);
 
      
 function handles = gaussfilt(handles)
@@ -818,9 +818,9 @@ function handles = cutfun(handles)
     handles.fftsubcut1 = handles.spsub1;
     handles.fftsubcut2 = handles.spsub2;
     handles.fftsubcut3 = handles.spsub3;
- ic = handles.Param.pas2*1/2+1;
- jc = handles.Param.pas2*1/2+1;
- [I,J] = ndgrid(1:handles.Param.pas2,1:handles.Param.pas2);
+ ic = handles.Param.subwindow_size*1/2+1;
+ jc = handles.Param.subwindow_size*1/2+1;
+ [I,J] = ndgrid(1:handles.Param.subwindow_size,1:handles.Param.subwindow_size);
  M = double((I-ic).^2+(J-jc).^2<=(handles.Param.cut)^2); 
  handles.fftsubcut1(M>0) = 0;
  handles.fftsubcut2(M>0) = 0;
@@ -872,28 +872,28 @@ function handles=affichim(handles)
      x = handles.Posi(win1,1);
      y = handles.Posi(win1,2);
      
-     handles.sub1=a(y:y+handles.Param.pas2-1,x:x+handles.Param.pas2-1);
+     handles.sub1=a(y:y+handles.Param.subwindow_size-1,x:x+handles.Param.subwindow_size-1);
      imagesc(handles.sub1,'Parent',handles.im1)
      set(handles.im1,'Visible','off')
      
      x = handles.Posi(win2,1);
      y = handles.Posi(win2,2);
-     handles.sub2=a(y:y+handles.Param.pas2-1,x:x+handles.Param.pas2-1);
+     handles.sub2=a(y:y+handles.Param.subwindow_size-1,x:x+handles.Param.subwindow_size-1);
      imagesc(handles.sub2,'Parent',handles.im2)
      set(handles.im2,'Visible','off')
 
      x = handles.Posi(win3,1);
      y = handles.Posi(win3,2);
-     handles.sub3=a(y:y+handles.Param.pas2-1,x:x+handles.Param.pas2-1);
+     handles.sub3=a(y:y+handles.Param.subwindow_size-1,x:x+handles.Param.subwindow_size-1);
      imagesc(handles.sub3,'Parent',handles.im3)
      set(handles.im3,'Visible','off')
      handles.wins = [win1,win2,win3];
  
                
 function handles = proporfft(handles)
-     ic = handles.Param.pas2/2+1;
-     jc = handles.Param.pas2/2+1;
-     [I,J] = ndgrid(1:handles.Param.pas2,1:handles.Param.pas2);
+     ic = handles.Param.subwindow_size/2+1;
+     jc = handles.Param.subwindow_size/2+1;
+     [I,J] = ndgrid(1:handles.Param.subwindow_size,1:handles.Param.subwindow_size);
      M = double((I-ic).^2+(J-jc).^2<=(handles.Param.cut)^2); 
 
     handles.fftsubcutsp1 = handles.fftsubcut1;
@@ -901,11 +901,11 @@ function handles = proporfft(handles)
     handles.fftsubcutsp3 = handles.fftsubcut3;
     
     
-    reshaped = reshape(handles.fftsubcutsp1,[handles.Param.pas2*handles.Param.pas2 ,1]);         % Colonnes par colonnes donc l'indexage en 
+    reshaped = reshape(handles.fftsubcutsp1,[handles.Param.subwindow_size*handles.Param.subwindow_size ,1]);         % Colonnes par colonnes donc l'indexage en 
     [~,index]= sort(reshaped ,'descend');
-    nbel = handles.Param.propor * handles.Param.pas2*handles.Param.pas2;
-    if nbel > handles.Param.pas2*handles.Param.pas2
-        nbel =  handles.Param.pas2*handles.Param.pas2;
+    nbel = handles.Param.propor * handles.Param.subwindow_size*handles.Param.subwindow_size;
+    if nbel > handles.Param.subwindow_size*handles.Param.subwindow_size
+        nbel =  handles.Param.subwindow_size*handles.Param.subwindow_size;
     else
     end
     
@@ -915,16 +915,16 @@ function handles = proporfft(handles)
  handles.fftsubcutsp1(M>0) = 1;
 
     spsubcutfilt = handles.fftsubcutsp1;
-    B = false(handles.Param.pas2);
+    B = false(handles.Param.subwindow_size);
     B(spsubcutfilt>0)=1;
     se=strel('disk',handles.Param.strel);
     handles.fftsubcutspse1=imclose(B,se);
     spsubcutfilt =  handles.fftsubcutspse1;
     
     norm = sum(sum((spsubcutfilt).^2));
-    [Yg,Xg]=meshgrid(1:(handles.Param.pas2),1:(handles.Param.pas2));
-    xc = handles.Param.pas2/2;
-    yc = handles.Param.pas2/2;
+    [Yg,Xg]=meshgrid(1:(handles.Param.subwindow_size),1:(handles.Param.subwindow_size));
+    xc = handles.Param.subwindow_size/2;
+    yc = handles.Param.subwindow_size/2;
     Xo = Xg-xc; 
     Yo = Yg-yc;
     Y = (Yg-yc).^2; % Lignes
@@ -934,11 +934,11 @@ function handles = proporfft(handles)
     XY = sum(sum((spsubcutfilt).^2.*Xo.*Yo))/norm;
     handles.M1 = [XX,XY;XY,YY];
 
-     reshaped = reshape(handles.fftsubcutsp2,[handles.Param.pas2*handles.Param.pas2 ,1]);         % Colonnes par colonnes donc l'indexage en 
+     reshaped = reshape(handles.fftsubcutsp2,[handles.Param.subwindow_size*handles.Param.subwindow_size ,1]);         % Colonnes par colonnes donc l'indexage en 
     [~,index]= sort(reshaped ,'descend');
-    nbel = handles.Param.propor * handles.Param.pas2*handles.Param.pas2;
-    if nbel > handles.Param.pas2*handles.Param.pas2
-        nbel =  handles.Param.pas2*handles.Param.pas2;
+    nbel = handles.Param.propor * handles.Param.subwindow_size*handles.Param.subwindow_size;
+    if nbel > handles.Param.subwindow_size*handles.Param.subwindow_size
+        nbel =  handles.Param.subwindow_size*handles.Param.subwindow_size;
     else
     end
     
@@ -948,16 +948,16 @@ function handles = proporfft(handles)
  
     spsubcutfilt = handles.fftsubcutsp2;
     
-    B = false(handles.Param.pas2);
+    B = false(handles.Param.subwindow_size);
     B(spsubcutfilt>0)=1;
     se=strel('disk',handles.Param.strel);
     handles.fftsubcutspse2=imclose(B,se);    
     spsubcutfilt =  handles.fftsubcutspse2;
     
     norm = sum(sum((spsubcutfilt).^2));
-    [Yg,Xg]=meshgrid(1:(handles.Param.pas2),1:(handles.Param.pas2));
-    xc = handles.Param.pas2/2;
-    yc = handles.Param.pas2/2;
+    [Yg,Xg]=meshgrid(1:(handles.Param.subwindow_size),1:(handles.Param.subwindow_size));
+    xc = handles.Param.subwindow_size/2;
+    yc = handles.Param.subwindow_size/2;
     Xo = Xg-xc; 
     Yo = Yg-yc;
     Y = (Yg-yc).^2; % Lignes
@@ -967,11 +967,11 @@ function handles = proporfft(handles)
     XY = sum(sum((spsubcutfilt).^2.*Xo.*Yo))/norm;
     handles.M2 = [XX,XY;XY,YY];
     
-    reshaped = reshape(handles.fftsubcutsp3,[handles.Param.pas2*handles.Param.pas2,1]);         % Colonnes par colonnes donc l'indexage en 
+    reshaped = reshape(handles.fftsubcutsp3,[handles.Param.subwindow_size*handles.Param.subwindow_size,1]);         % Colonnes par colonnes donc l'indexage en 
     [~,index]= sort(reshaped ,'descend');
-    nbel = handles.Param.propor * handles.Param.pas2*handles.Param.pas2;
-    if nbel > handles.Param.pas2*handles.Param.pas2
-        nbel =  handles.Param.pas2*handles.Param.pas2;
+    nbel = handles.Param.propor * handles.Param.subwindow_size*handles.Param.subwindow_size;
+    if nbel > handles.Param.subwindow_size*handles.Param.subwindow_size
+        nbel =  handles.Param.subwindow_size*handles.Param.subwindow_size;
     else
     end
     
@@ -980,16 +980,16 @@ function handles = proporfft(handles)
     handles.fftsubcutsp3(M>0) = 1;      
 
     spsubcutfilt = handles.fftsubcutsp3;
-    B = false(handles.Param.pas2);
+    B = false(handles.Param.subwindow_size);
     B(spsubcutfilt>0)=1;
     se=strel('disk',handles.Param.strel);
     handles.fftsubcutspse3=imclose(B,se);  
     spsubcutfilt =  handles.fftsubcutspse3;
     
     norm = sum(sum((spsubcutfilt).^2));
-    [Yg,Xg]=meshgrid(1:(handles.Param.pas2),1:(handles.Param.pas2));
-    xc = handles.Param.pas2/2;
-    yc = handles.Param.pas2/2;
+    [Yg,Xg]=meshgrid(1:(handles.Param.subwindow_size),1:(handles.Param.subwindow_size));
+    xc = handles.Param.subwindow_size/2;
+    yc = handles.Param.subwindow_size/2;
     Xo = Xg-xc; 
     Yo = Yg-yc;
     Y = (Yg-yc).^2; % Lignes
@@ -1021,8 +1021,8 @@ function handles = affichproporfft(handles)
    
 function handles = trace_defo(handles)
 
-    xo =  handles.Param.pas2/2;
-    yo =  handles.Param.pas2/2;
+    xo =  handles.Param.subwindow_size/2;
+    yo =  handles.Param.subwindow_size/2;
         
     [~,E] = eig(handles.M1);
     L1 = 2*sqrt(E(2,2)/2);              
@@ -1120,9 +1120,9 @@ function handles = ellipses_def(handles)
     abs_im_fft_w = handles.fftsubcut1;
     [yu,xu] = localMaximum_h(abs_im_fft_w,1,0,handles.Param.nbpoints);   
     
-    [theta,rho]=cart2pol(xu-handles.Param.pas2/2,yu-handles.Param.pas2/2);
-    handles.xu1=handles.Param.pas2./(2.*rho).*cos(theta);
-    handles.yu1=handles.Param.pas2./(2.*rho).*sin(theta);
+    [theta,rho]=cart2pol(xu-handles.Param.subwindow_size/2,yu-handles.Param.subwindow_size/2);
+    handles.xu1=handles.Param.subwindow_size./(2.*rho).*cos(theta);
+    handles.yu1=handles.Param.subwindow_size./(2.*rho).*sin(theta);
    
     set(handles.fft1cut,'Visible','on')
     imagesc(handles.fftsubcut1,'Parent',handles.fft1cut)
@@ -1131,7 +1131,7 @@ function handles = ellipses_def(handles)
    
     [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);  
     hold(handles.fft1cut,'on');
-    f_ellipseplotax(ai,bi,handles.Param.pas2/2+1,handles.Param.pas2/2+1,phi,'red',2,handles.fft1cut);
+    f_ellipseplotax(ai,bi,handles.Param.subwindow_size/2+1,handles.Param.subwindow_size/2+1,phi,'red',2,handles.fft1cut);
     handles.ai1 = ai;
     handles.bi1 =bi;
     handles.phi1 = phi;
@@ -1152,7 +1152,7 @@ function handles = ellipses_def(handles)
    
     [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);  
     hold(handles.fft2cut,'on');
-    f_ellipseplotax(ai,bi,handles.Param.pas2/2+1,handles.Param.pas2/2+1,phi,'red',2,handles.fft2cut);
+    f_ellipseplotax(ai,bi,handles.Param.subwindow_size/2+1,handles.Param.subwindow_size/2+1,phi,'red',2,handles.fft2cut);
       handles.ai2 = ai;
     handles.bi2 =bi;
     handles.phi2 = phi;
@@ -1175,7 +1175,7 @@ function handles = ellipses_def(handles)
    
     [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);  
     hold(handles.fft3cut,'on');
-    f_ellipseplotax(ai,bi,handles.Param.pas2/2+1,handles.Param.pas2/2+1,phi,'red',2,handles.fft3cut);
+    f_ellipseplotax(ai,bi,handles.Param.subwindow_size/2+1,handles.Param.subwindow_size/2+1,phi,'red',2,handles.fft3cut);
       handles.ai3 = ai;
     handles.bi3 =bi;
     handles.phi3 = phi;
@@ -1190,8 +1190,8 @@ function handles = ellipses_def(handles)
         
 function handles = affichsize(handles)
 
-    xo =  handles.Param.pas2/4;
-    yo =  handles.Param.pas2/2;
+    xo =  handles.Param.subwindow_size/4;
+    yo =  handles.Param.subwindow_size/2;
         
     [~,E] = eig(handles.M1);
     L1 = sqrt(E(2,2)/2);              
@@ -1221,13 +1221,13 @@ function handles = affichsize(handles)
     plot(X1,Y1,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im1);
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im1);
     hold(handles.im1,'on');
-    f_ellipseplotax(handles.Param.pas2/2*1/handles.ai1,handles.Param.pas2/2*1/handles.bi1,xo+1/2*handles.Param.pas2,yo,handles.phi1,'red',2,handles.im1);
+    f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai1,handles.Param.subwindow_size/2*1/handles.bi1,xo+1/2*handles.Param.subwindow_size,yo,handles.phi1,'red',2,handles.im1);
    
-%     plot(handles.im1,handles.xu1+xo+1/2*handles.Param.pas2,handles.yu1+yo,'Marker','+','Color','yellow','MarkerSize',1,'LineStyle','none')     
+%     plot(handles.im1,handles.xu1+xo+1/2*handles.Param.subwindow_size,handles.yu1+yo,'Marker','+','Color','yellow','MarkerSize',1,'LineStyle','none')     
 %     Par =CircleFitByPratt([handles.xu1,handles.yu1]);  
 %      hold(handles.im1,'on');
 %      viscircles(handles.im1,Par(1,1:2),Par(1,3));
-  %  f_ellipseplotax(ai,bi,xo+1/2*handles.Param.pas2,yo+1/4*handles.Param.pas2,phi,'yellow',handles.im1)
+  %  f_ellipseplotax(ai,bi,xo+1/2*handles.Param.subwindow_size,yo+1/4*handles.Param.subwindow_size,phi,'yellow',handles.im1)
     
 %     
     set(handles.im1,'Visible','off')
@@ -1263,7 +1263,7 @@ function handles = affichsize(handles)
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im2);
        hold(handles.im2,'on');
  
-   f_ellipseplotax(handles.Param.pas2/2*1/handles.ai2,handles.Param.pas2/2*1/handles.bi2,xo+1/2*handles.Param.pas2,yo,handles.phi2,'red',2,handles.im2);
+   f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai2,handles.Param.subwindow_size/2*1/handles.bi2,xo+1/2*handles.Param.subwindow_size,yo,handles.phi2,'red',2,handles.im2);
      hold(handles.im2,'off');
 set(handles.im2,'Visible','off')
     
@@ -1295,7 +1295,7 @@ set(handles.im2,'Visible','off')
     plot(X1,Y1,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im3);
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im3);
     hold(handles.im3,'on');
-    f_ellipseplotax(handles.Param.pas2/2*1/handles.ai3,handles.Param.pas2/2*1/handles.bi3,xo+1/2*handles.Param.pas2,yo,handles.phi3,'red',2,handles.im3);   
+    f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai3,handles.Param.subwindow_size/2*1/handles.bi3,xo+1/2*handles.Param.subwindow_size,yo,handles.phi3,'red',2,handles.im3);   
      set(handles.im3,'Visible','off')
     hold(handles.im3,'off');
 
@@ -1303,8 +1303,8 @@ set(handles.im2,'Visible','off')
     
 function handles = affichsize_ellipsdef(handles)
 
-    xo =  handles.Param.pas2/4;
-    yo =  handles.Param.pas2/2;
+    xo =  handles.Param.subwindow_size/4;
+    yo =  handles.Param.subwindow_size/2;
         
 
     amp = 1/2*log(handles.bi1/handles.ai1);
@@ -1325,7 +1325,7 @@ function handles = affichsize_ellipsdef(handles)
     plot(X1,Y1,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im1);
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im1);
     hold(handles.im1,'on');
-    f_ellipseplotax(handles.Param.pas2/2*1/handles.ai1,handles.Param.pas2/2*1/handles.bi1,xo+1/2*handles.Param.pas2,yo,handles.phi1,'red',2,handles.im1);
+    f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai1,handles.Param.subwindow_size/2*1/handles.bi1,xo+1/2*handles.Param.subwindow_size,yo,handles.phi1,'red',2,handles.im1);
        
     set(handles.im1,'Visible','off')
     hold(handles.im1,'off');
@@ -1349,7 +1349,7 @@ function handles = affichsize_ellipsdef(handles)
     plot(X1,Y1,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im2);
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im2);
     hold(handles.im2,'on');
-    f_ellipseplotax(handles.Param.pas2/2*1/handles.ai2,handles.Param.pas2/2*1/handles.bi2,xo+1/2*handles.Param.pas2,yo,handles.phi2,'red',2,handles.im2);
+    f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai2,handles.Param.subwindow_size/2*1/handles.bi2,xo+1/2*handles.Param.subwindow_size,yo,handles.phi2,'red',2,handles.im2);
     set(handles.im2,'Visible','off')
     hold(handles.im2,'off');
     
@@ -1373,7 +1373,7 @@ function handles = affichsize_ellipsdef(handles)
     plot(X1,Y1,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im3);
     plot(X2,Y2,'Marker','.','LineStyle','-','Color','red','LineWidth',3,'Parent',handles.im3);
     hold(handles.im3,'on');
-    f_ellipseplotax(handles.Param.pas2/2*1/handles.ai3,handles.Param.pas2/2*1/handles.bi3,xo+1/2*handles.Param.pas2,yo,handles.phi3,'red',2,handles.im3);  
+    f_ellipseplotax(handles.Param.subwindow_size/2*1/handles.ai3,handles.Param.subwindow_size/2*1/handles.bi3,xo+1/2*handles.Param.subwindow_size,yo,handles.phi3,'red',2,handles.im3);  
     set(handles.im3,'Visible','off')
     hold(handles.im3,'off');
        axes(handles.fft3cut);
@@ -1481,17 +1481,17 @@ function enterwindow_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of enterwindow as text
 %        str2double(get(hObject,'String')) returns contents of enterwindow as a double
-    handles.Param.pas2 =  str2double(get(hObject,'String'));
-    set(handles.window,'Value',handles.Param.pas2);
-    if floor(handles.Param.pas2/2)==handles.Param.pas2/2
-        handles.rec = handles.Param.pas2/2;
+    handles.Param.subwindow_size =  str2double(get(hObject,'String'));
+    set(handles.window,'Value',handles.Param.subwindow_size);
+    if floor(handles.Param.subwindow_size/2)==handles.Param.subwindow_size/2
+        handles.rec = handles.Param.subwindow_size/2;
      else
-         handles.rec = (handles.Param.pas2-1)/2;
+         handles.rec = (handles.Param.subwindow_size-1)/2;
     end
 
     handles = calculregion(handles);
     handles = affichim(handles);
-    KB=handles.Param.pas2^2/16*9.53674e-7*8;  
+    KB=handles.Param.subwindow_size^2/16*9.53674e-7*8;  
     KBwhole = KB*handles.regl;
     set(handles.sizesub,'String',sprintf(['One image: ' num2str(floor(KBwhole)) ' MB']))
     handles = affichim(handles);
