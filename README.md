@@ -96,4 +96,14 @@ Param.strel = 4;                % Parameter to fill the holes in the thresholded
 ```
 
 ### If you spot problems, email me please :-) !
-  
+
+## Outputs
+
+* a directory ``results_averageon_<tleng>_averageon_<timestep>`` is created in the output path
+* TIF stacks of images ``Deformation_map...`` and ``Deformation_map_onim...``
+* A snapshot of the GUI if used
+* ``Param.mat``, saving input parameters
+* ``Results.mat``, saving results
+
+``Results.mat`` contains a structure ``Results``, values ``regl`` (number of subimages), ``Posi`` (positions of subimages), ``numX`` and ``numY`` (dimensions of subimages array), ``ci`` (time average window?).  Main results are in ``Results.im_regav`` structure in the form of arrays ``M``, ``S``, ``angS``, ``a``, ``b``, ``phi``.
+* ``a``, ``b``, ``phi`` : (real space) ellipse major axis, minor axis, and angle.
