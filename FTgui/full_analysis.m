@@ -14,7 +14,7 @@ function Results = full_analysis(Param)
     Len = numel(Param.tsart:Param.tleng-Param.timestep+1);
     Results.ci = Len;
     
-    Results.im_regav = struct('spect',zeros(Len,Results.regl,Param.pas2),'M',zeros(Len,Results.regl,2),'S',...
+    Results.im_regav = struct('spect',zeros(Len,Results.regl,Param.subwindow_size),'M',zeros(Len,Results.regl,2),'S',...
         zeros(Len,Results.numY,Results.numX),...
         'angS',zeros(Len,Results.numY,Results.numX),'a',zeros(Len,Results.numY,Results.numX),...
         'b',zeros(Len,Results.numY,Results.numX),'phi',zeros(Len,Results.numY,Results.numX));
@@ -37,7 +37,7 @@ function Results = full_analysis(Param)
    end
    if Param.def_ellipse == 1 && Param.regsize == 1
         Results = def_analysis_ellips(Results);     % compute cell orientation subimages
-   else
+   else %no ellipse analysis, inertia matrix analysis
        Results = def_analysis(Param,Results);     % compute cell orientation subimages
    end
    

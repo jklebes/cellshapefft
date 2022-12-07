@@ -68,7 +68,6 @@ handles.Param.propor = 0.1;
 handles.Param.sigma = 0.1;
 handles.Param.strel = 4;
 handles.Param.subwindow_size = 128;
-handles.Param.zoom = 6;
 
 handles.rec = (1-handles.Param.overlap)*handles.Param.subwindow_size; %done again by calculregion?
 handles.Param.nbpoints = 30;

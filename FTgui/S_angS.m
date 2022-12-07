@@ -1,4 +1,4 @@
-function [Si,angSi] = S_angS(M)
+ function [Si,angSi] = S_angS(M)
 % [S,angS] = S_angS(M)
 % This function defines the angle and amplitude of cell deformation
 % from inertia matrix
@@ -25,6 +25,8 @@ function [Si,angSi] = S_angS(M)
         Dev = Mo-1/2*trace(Mo)*eye(2);   % deviation matrix
         [V,~] = eig(Dev);              % eigenvectors of deviation matrix to extract the angle
         ang=atan(V(1,2)/V(2,2));       % definition of angle
+        % or atan2?  atan returns a range appropriate for nematic, but is 
+        %less accurate near V(2,2) = 0
         angSi(kk) = ang;                    % register angle
         Si(kk) = lgE;                       % register amplitude
     end

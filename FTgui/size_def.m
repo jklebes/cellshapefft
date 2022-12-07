@@ -10,11 +10,11 @@ function [A,B,Phi,Yu,Xu]= size_def(Param,SFT)
 %% Filter definition
     filtre = gaussianFilter(ceil(2*Param.sigma),Param.sigma);
 %% Find center of the image
-    ic = Param.pas2*1/2+1;
-    jc = Param.pas2*1/2+1;              
+    ic = Param.subwindow_size*1/2+1;
+    jc = Param.subwindow_size*1/2+1;              
 
 %%  Define pixels to remove each time  
-    [I,J] = ndgrid(1:Param.pas2,1:Param.pas2);
+    [I,J] = ndgrid(1:Param.subwindow_size,1:Param.subwindow_size);
     M = double((I-ic).^2+(J-jc).^2<=(Param.cut)^2); 
 
 
@@ -35,9 +35,10 @@ function [A,B,Phi,Yu,Xu]= size_def(Param,SFT)
         [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);  
         end
         
-        A(im) = Param.pas2/2*1/bi;  % On divise par deux car on obtient le diam?tre de la 
-    % cellule car distance entre les cot?s qui ressort en Fourier
-        B(im) = Param.pas2/2*1/ai;
+        %a and b switched
+        A(im) = Param.subwindow_size/2*1/bi;  % On divise par deux car on obtient le diam?tre de la 
+        % cellule car distance entre les cot?s qui ressort en Fourier
+        B(im) = Param.subwindow_size/2*1/ai;
         Xu(im,:) =xu';
         Yu(im,:) =yu';
         Phi(im) = phi;

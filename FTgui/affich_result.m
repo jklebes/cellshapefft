@@ -19,7 +19,7 @@ function affich_result(Param,Results,col)
         text((floor(Param.siz(2)*0.9)-Param.scale),Param.scale-30,'100%','color','black')
         set(gcf,'color','white');
         img = getframe(gcf);
-        imwrite(img.cdata, [Param.pathout  ['Deformation_map_averagedtime' num2str(Param.timestep) '_averaged_space_' num2str(Param.pas2) '.tif' ]],'compression','none','WriteMode','append'); % save image png
+        imwrite(img.cdata, [Param.pathout  ['Deformation_map_averagedtime' num2str(Param.timestep) '_averaged_space_' num2str(Param.subwindow_size) '.tif' ]],'compression','none','WriteMode','append'); % save image png
         close(Figure);
 
         
@@ -38,7 +38,7 @@ function affich_result(Param,Results,col)
         text((floor(Param.siz(2)*0.9)-Param.scale),Param.scale-30,'100%','color','black')
         set(gcf,'color','white');
         img = getframe(gcf);
-        imwrite(img.cdata, [Param.pathout  ['Deformation_map_onim_averagedtime' num2str(Param.timestep) '_averaged_space_' num2str(Param.pas2) '.tif' ]],'compression','none','WriteMode','append'); % save image png
+        imwrite(img.cdata, [Param.pathout  ['Deformation_map_onim_averagedtime' num2str(Param.timestep) '_averaged_space_' num2str(Param.subwindow_size) '.tif' ]],'compression','none','WriteMode','append'); % save image png
         close(Figure);
 
 

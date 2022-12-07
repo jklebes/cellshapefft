@@ -20,8 +20,8 @@ function [Udef,Vdef,Xdef,Ydef] = format_matrix_plot(Param,Results,Row,Col)
     for ml = 1:Results.ci
         for win =1:Results.regl % for each subimage
             [alk,blk] = find(Reg_xy == win);
-          xo =  Results.Posi(win,1)+Param.pas2/2-1; % find positions of the center of the subimages
-          yo =  Results.Posi(win,2)+Param.pas2/2-1;
+          xo =  Results.Posi(win,1)+Param.subwindow_size/2-1; % find positions of the center of the subimages
+          yo =  Results.Posi(win,2)+Param.subwindow_size/2-1;
           [I,J] = ind2sub([Results.numY,Results.numX],win);
 
             if sum(yo == Row)>0 && sum(Col(yo==Row)==xo)>0
