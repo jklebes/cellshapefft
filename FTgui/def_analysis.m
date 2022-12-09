@@ -9,8 +9,8 @@ function Results = def_analysis(Param,Results)
         ST = sum(sum(SFT,2),3);
         %indexx = find();
         %% Inertia matrix 
-        
-        Msft = inertia_matp_sigma(Param,SFT((ST~=0 | isnan(ST)~=0),:,:));
+
+        Msft = inertia_matp_sigma(Param,SFT((ST~=0 | isnan(ST)~=0),:,:), Results.tile_slopes);
         
         %% Computation of cell deformation 
         

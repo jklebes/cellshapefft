@@ -1,6 +1,4 @@
 function siz = size_image(path,name)   
-   infos = imfinfo([path,  name(1).name]); 
-   infos = infos(1);
-
+   infos = imfinfo([path,  name]); 
    siz = [infos.Height,infos.Width];
 end
