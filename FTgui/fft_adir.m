@@ -16,7 +16,7 @@ function [abs_im_fft] = fft_adir(im)
     else
 
     [p,~] = perdecomp(im);          % reduce image size effects by periodizing borders
-   
+   im=imgaussfilt(im,2);
    im_fft = fftn(p);               % 2D fast fourier transform
     im_fft_shift = fftshift(im_fft);% shifts the FT for representation purpose
     abs_im_fft = abs(im_fft_shift).^2; % takes the module
