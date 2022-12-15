@@ -66,7 +66,7 @@ classdef cellshapefft < handle
             end
             
             if isempty(param.chunk_size) % indices of images to analyze
-                param.chunk_size = 20;
+                param.chunk_size = 16;
             end
             
             if isempty(param.tleng) % number of images to analyze
@@ -78,7 +78,7 @@ classdef cellshapefft < handle
             end
             
             if isempty(param.pas2)
-                 param.pas2 = 256; % size of subimages
+                 param.pas2 = 128; % size of subimages
             end
             
             if isempty(param.scale)
@@ -108,6 +108,10 @@ classdef cellshapefft < handle
             if isempty(param.regsize)
                  param.regsize = 0;  % 
             end
+
+            if isempty(param.ffmpeg_path)
+                 param.ffmpeg_path = "ffmpeg";  % 
+            end
             
             if isempty(param.workers)
                  param.workers = 4;  % cores for parallel computation
@@ -118,7 +122,19 @@ classdef cellshapefft < handle
             obj.param.siz=[info.Width info.Height];        % extract size of the images
             obj.results = struct('regl',[],'Posi',[],'im_regav',[],'ci',[]); % result structure
             mkdir(obj.param.pathout);
-            
+
+            %save a copy of input file
+            try
+            if ispc
+                system(['copy /b callcellshapefft.m ' obj.param.pathout filesep]);
+            else %unix
+                system(['cp ./callcellshapefft.m' obj.param.pathout filesep]);
+            end
+            catch
+                %if pathing problems, skip
+                disp(["Problems encountered while attempting to copy callcellshapefft.m to" ...
+                    obj.param.pathout ", input parramters were not saved"])
+            end
         end
         
         function full_analysis(obj)
@@ -205,6 +221,7 @@ classdef cellshapefft < handle
                 obj.results = struct('regl',[],'Posi',[],'im_regav',[],'ci',[]); % result structure
             end
                 rR = expReader([obj.param.pathout filesep 'img']);
+                rR.ffmpeg_path = obj.param.ffmpeg_path;
                 rR.ffmpeg;
         end
         
@@ -221,7 +238,7 @@ classdef cellshapefft < handle
             % of the Result structure are filled.
             disp('Registering...');
                         
-            rec = 1/2*obj.param.pas2;                      % number of shared pixels between
+            rec = floor(1/2*obj.param.pas2);                      % number of shared pixels between
                                                        % subimages
 
             if isempty(obj.param.contour)                  % if no mask is required
@@ -282,7 +299,7 @@ classdef cellshapefft < handle
         
         function spectrum_analysis(obj)
         % results = spectrum_analysis(obj.param,results)
-        %
+        %expRe
         % This function performs Fourier Transform on subimages and averages the 
         % spectrum on time.
         % The im_regav structure is filled with averaged spectrums.
@@ -291,27 +308,31 @@ classdef cellshapefft < handle
         %--------------------------------------------------------------------------
 
 
-            obj.results.im_regav = struct(repmat(struct('c',struct(repmat(struct('spect',zeros(obj.param.pas2/4),'S',[]...
+            obj.results.im_regav = struct(repmat(struct('c',struct(repmat(struct('spect',zeros(ceil(obj.param.pas2/4)),'S',[]...
                 ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.results.regl),1))),obj.param.tleng/obj.param.timestep,1));
             % Initialization of the structure im_regav, containing spectrums
             % cell deformations and sizes for each averaged subimage
+            %TODO why divide tile size by 4? seems to only use middle half
+            %of Fourier transforms
 
             obj.results.ci =0;                             % ci will be the final number of slices
             if isempty(obj.param.contour)                  % portion of code when a mask is not required
                 for to =1:obj.param.timestep:obj.param.tleng-obj.param.timestep+1  % index of first images for each slice
-                    display(['Computation of FT, time: ',num2str(to)]);% for the user to keep track
+                    display(['Computation of FT, time: ',num2str(obj.param.time_points(to))]);% for the user to keep track
                     obj.results.ci = obj.results.ci+1;         % increment the counter of ci 
                     for t = to:to+obj.param.timestep-1     % for the images index contained between to and
                                                        % to+thickness of the average
-                        a = obj.param.reader.readSpecificImage(t);% read the image
+                        a = obj.param.reader.readSpecificImage(obj.param.time_points(t));% read the image
                         a = im2double(a);
 
                         for win = 1:obj.results.regl(t)    % for each subimage of the image
                            x = obj.results.Posi(win,1,t);  % get positionin x and y
                            y = obj.results.Posi(win,2,t);
                            FT = obj.fft_adir(a(y:y+obj.param.pas2-1,x:x+obj.param.pas2-1));
+                           start= floor(3/8*obj.param.pas2);
+                           len = size(obj.results.im_regav(obj.results.ci).c(win).spect);
                            obj.results.im_regav(obj.results.ci).c(win).spect=obj.results.im_regav(obj.results.ci).c(win).spect...
-                               +FT(3/8*obj.param.pas2+1:5/8*obj.param.pas2,3/8*obj.param.pas2+1:5/8*obj.param.pas2); % perform FT analysis 
+                               +FT(start+1:start+len(1),start+1:start+len(1)); % perform FT analysis 
                         end
                     end
                     obj.results.im_regav(obj.results.ci).c(win).spect =...
@@ -470,8 +491,8 @@ classdef cellshapefft < handle
             hold on                                         % wait
 
                 for win =1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2; % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2;
+                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2); % find positions of the center of the subimages
+                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2);
 
                     a = obj.results.im_regav(c).c(win).a;    % extract half major axis
                     b = obj.results.im_regav(c).c(win).b; % extract half minor axis
@@ -509,8 +530,8 @@ classdef cellshapefft < handle
                 imshow(obj.param.reader.readSpecificImage(c));
                 hold on                                         % wait
                 for win =1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2; % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2;
+                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2); % find positions of the center of the subimages
+                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2);
 
                     amp = obj.results.im_regav(c).c(win).S;    % extract amplitude 
                     ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
@@ -560,8 +581,8 @@ classdef cellshapefft < handle
                 I = imadjust(imcomplement(obj.param.reader.readSpecificImage(obj.param.time_points(c))));
                 line_array = zeros(obj.results.regl((c-1)*(obj.param.timestep)+1), 4);
                 for win = 1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2; % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2;
+                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2); % find positions of the center of the subimages
+                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2);
 
                     amp = 2*obj.results.im_regav(c).c(win).S;    % extract amplitude 
                     ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
@@ -605,8 +626,8 @@ classdef cellshapefft < handle
                 I = imadjust((obj.param.reader.readSpecificImage(obj.param.time_points(c))));
                 line_array = zeros(obj.results.regl((c-1)*(obj.param.timestep)+1), 4);
                 for win = 1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2; % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2;
+                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2); % find positions of the center of the subimages
+                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2);
 
                     amp = obj.results.im_regav(c).c(win).S;    % extract amplitude 
                     ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
@@ -641,8 +662,8 @@ classdef cellshapefft < handle
                 
                 line_array = zeros(obj.results.regl((c-1)*(obj.param.timestep)+1), 4);
                 for win = 1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2; % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+obj.param.pas2/2;
+                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2); % find positions of the center of the subimages
+                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.pas2/2);
 
                     amp = obj.results.im_regav(c).c(win).S;    % extract amplitude 
                     ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
@@ -677,6 +698,7 @@ classdef cellshapefft < handle
                     abs_im_fft = NaN;
                 else
                     [p,~] = obj.perdecomp(im);      % reduce image size effects by periodizing borders
+                    p=imgaussfilt(p,obj.param.stripe_sigma);    
                     im_fft = fftn(p);               % 2D fast fourier transform
                     im_fft_shift = fftshift(im_fft);% shifts the FT for representation purpose
                     abs_im_fft = abs(im_fft_shift); % takes the module
@@ -834,8 +856,8 @@ classdef cellshapefft < handle
 
             [yu,xu] = localMaximum_h(abs_im_fft_w,2,0,40);   
             [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);  
-            a = obj.param.pas2/2*1/ai;
-            b =obj.param.pas2/2*1/bi;
+            a = floor(obj.param.pas2/2)*1/ai;
+            b =floor(obj.param.pas2/2)*1/bi;
         end
         
         function [hEllipse,hAxes] = f_ellipseplotax(obj,a,b,x0,y0,phi,col,ldw,axh)
