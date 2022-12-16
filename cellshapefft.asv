@@ -438,7 +438,7 @@ classdef cellshapefft < handle
 
             im_regav = cell(obj.param.tleng,1);
             
-            parfor c = 1:obj.results.ci                                   % for each averaged time
+             for c = 1:obj.results.ci                                   % for each averaged time
                 display(['Computation of cell deformation, time: ',num2str(obj.param.time_points(c))]); % for the user to keep track
                 to_fill = obj.results.im_regav(c);
                 for re = 1:obj.results.regl(1+obj.param.timestep*(c-1))     % for each region
