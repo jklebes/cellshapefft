@@ -1,8 +1,7 @@
 # myosin-cable-detection
 
 Forked from mdurade/Coarse-grained-anisotropy-and-size-using-FFT , original code 
-
-This folder contains all the codes needed to perform the analysis developed and described in the article: 
+as developed and described in the article: 
     [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
 
 Abstract of the article:
@@ -24,23 +23,21 @@ two sets of fully segmented images, from Drosophila pupa and chicken embryo; the
 are robust. Perspectives include in vitro tissues, non-biological cellular patterns such as foams, and
 xyz stacks.
 
-This fork contains further developments by @cjwlab , 
+This fork contains further developments by @cjwlab:
+
 Original code by Durande (2017)
     
-    Further modification by Guillermo Serrano Najera (2019)
-     > Converted into a class for convenience
-     > Plotting functions modified to be faster with very large images
-     > Parallelization def_analysis and plotting
-     > Array multiplication (.*) for masking (much faster than original)
+Further modification by Guillermo Serrano Najera (2019)
+* Converted into a class for convenience
+* Plotting functions modified to be faster with very large images
+* Parallelization def_analysis and plotting
+* Array multiplication (.*) for masking (much faster than original)
 
-    Modifications Jason Klebes (2022)
-     > splitting off some functions (perdecomp) for re-use.
-     > Should work as installed from github with sister projects (+utilities).
-     > notebooks, new GUI app for calibrating
-    
-    Code to analyse the cell deformation on large images with Fourier 
-    transform. This code generates maps of cell deformation based on the 
-    computation of the inertia matrix on Fourier transforms of subimages.
+Modifications Jason Klebes (2022)
+* Developments specific to our DSLM experiments: attempts to suppress scan stripe noise, which biases the anisotropy calculation.
+* splitting off some functions (perdecomp) for re-use.
+* Should work as installed from github with sister projects (+utilities).
+* notebooks, new GUI app for calibrating
 
 ## Getting Started
 
