@@ -131,7 +131,7 @@ classdef cellshapefft < handle
             end
 
             if isempty(param.ffmpeg_path)
-                 param.ffmpeg_path = 'ffmpeg';  
+                 param.ffmpeg_path = "ffmpeg";  % 
             end
             
             if isempty(param.workers)

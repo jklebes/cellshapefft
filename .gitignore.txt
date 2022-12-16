@@ -1,2 +1,6 @@
 *.tif
 *.tiff
+*.fig
+*.png
+
+*.asv
