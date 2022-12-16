@@ -1,6 +1,7 @@
-# Coarse-grained-anisotropy-and-size-using-FFT
+# myosin-cable-detection
 
-This folder contains all the codes needed to perform the analysis developed and described in the article: 
+Forked from [mdurade/Coarse-grained-anisotropy-and-size-using-FFT](https://github.com/mdurande/coarse-grained-anisotropy-and-size-using-FFT) , original code 
+as developed and described in the article: 
     [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
 
 Abstract of the article:
@@ -22,6 +23,22 @@ two sets of fully segmented images, from Drosophila pupa and chicken embryo; the
 are robust. Perspectives include in vitro tissues, non-biological cellular patterns such as foams, and
 xyz stacks.
 
+This fork contains further developments by [@cjwlab](https://github.com/cjwlab):
+
+Original code by Durande (2017)
+    
+Further modification by Guillermo Serrano Najera (2019)
+* Converted into a class for convenience
+* Plotting functions modified to be faster with very large images
+* Parallelization def_analysis and plotting
+* Array multiplication (.*) for masking (much faster than original)
+
+Modifications Jason Klebes (2022)
+* Developments specific to our DSLM experiments: attempts to suppress scan stripe noise, which biases the anisotropy calculation.
+* splitting off some functions (perdecomp) for re-use.
+* Should work as installed from github with sister projects (+utilities).
+* notebooks, new GUI app for calibrating
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development.
@@ -29,73 +46,47 @@ These instructions will get you a copy of the project up and running on your loc
 ### Prerequisites
 
 You will need a version of matlab older than 2015. (Because MATLAB's GUI designer GUIDE was ended in 2015.  With newer MATLAB the app still runs as usual, but the GUI is not edittable in the same way - jk)
-Images should be either .png or .tiff .tif (stacks are okay)
+Images should be either .png or .tiff .tif (stacks are okay) 
 
 ### Installing
-
-To use the code you will need to download the whole repository. Then in matlab, navigate in the "browse folder section" and enter the folder coarse-grained-anisotropy-and-size-using-FFT. This folder contains one main script that you will need to change, and one sub-folder containing all the codes that you will not need to change to make it work. 
-
-Once you are there, double click on the script called "main script".
-
+* Install matlab 
+* Download package ``+utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
+* Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If localy installed and not on path, the full ffmpeg_path can be input manually.
+* Download this repository.
 
 ### How to use it in practice
+To run the code:
+* Create param struct, as in ``call_cellshape_fft.m`` .  Empty values will use the defaults as set in ``cellshapefft``.
+* Create cellshapefft object
+* Run analysis by calling method "full_analysis" or "full_analysis_chunks"
+        
+```
+    Example:
+    
+    param = struct();
+    param.pathin = 'C:PATH\TO\IMAGES';
+    param.contour = 'C:PATH\TO\MASK';
+    param.pathout = 'C:PATH\TO\RESULTS';
+    param.siz = [];
+    param.time_points = [];
+    param.chunk_size = [];
+    param.tleng = [];
+    param.timestep = [];
+    param.tile_size = [];
+    param.fres = [];
+    param.cut = [];
+    param.propor = [];
+    param.sigma = [];
+    param.scale = [];
+    param.strel = [];
+    param.register = [];
+    param.regsize = [];
+    param.workers = [];
 
-In this main code, you can set and see the main parameters of the program. The parameters that you should change each time are the ones regarding the location of your data on your computer and the location of the output folder you will have. 
+    obj = cellshapefft(param);
+    obj.full_analysis_chunks;
 
 ```
-Param.name = {'C:\Users\Melina\Adress to folder1\'};
-
-```
-Param.name should always be written this way. Be careful of the brakets and the slash at the end. It should be the path to your images.
-
-If you have two or more folders of images that you would like to analyze, this is possible if you write it like this: 
-
-```
- Param.name = {'C:\Users\Melina\Adress to folder1\';
-      'C:\Users\Melina\Adress to folder2\'};
-
-```
-
-
-```
-Param.pathin = {'C:\Users\Melina\Adress of output folder\'};
-
-```
-Param.pathin should always be written this way. Be careful of the brakets and the slash at the end. It should be the path to the folder where you want the program to create the output folder.
-
-
-
-```
-Param.overlap = 0.5;                % Overlap between boxes   
-Param.tsart = 10;                % Begining of the analysis
-Param.tleng = 27;                % End of the analysis
-Param.timestep = 2;             % Time step on which to time average
-
-```
-
-These are the only parameters that you NEED to change if you don't know/like coding.In this example, the overlap between the boxes will be of 50%, the first timeframe analysed will be the 10th image, the last one will be the 27 th and the sliding averaged will be of 2, so you will get 16 analysed frames corresponding to the average of frame 1 and 2, 2 and 3 and so on. 
-
-You can then press the run button on the top of your screen.
-
-### What the parameters are 
-
-In this main code, you can set and see the main parameters of the program. You do not need to do it if you use the user interface but when you are confortable with the analysis, you might want to bypass the userinterface and write them once and for all.
-Note that if you do not want the user interface, you should just comment the line (by adding '%') in front of the line GUI_deformation_ft(Param) and uncomment (removing the '%') in front of full_analysis(Param)
-
-
-```
-Param.pas2= 100;                % Size of the subwindows
-Param.cut = 5;                  % Number of pixels to cut around the center of the spectrum so as to visualize better
-Param.propor =  0.02;           % Proportion of points to keep for the thresholded spectrum
-Param.sigma = 0.8;              % Gaussian filter
-Param.register = 0;             % 1 to save the spectrums (be careful it's heavy) 0 otherwise
-Param.regsize = 0;              % Analysis in size
-Param.nbpoints = 30;            % Nmber of points to keep 
-Param.strel = 4;                % Parameter to fill the holes in the thresholded spectrum
-
-```
-
-### If you spot problems, email me please :-) !
 
 ## Outputs
 
