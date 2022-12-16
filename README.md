@@ -1,6 +1,6 @@
 # myosin-cable-detection
 
-Forked from mdurade/Coarse-grained-anisotropy-and-size-using-FFT , original code 
+Forked from [mdurade/Coarse-grained-anisotropy-and-size-using-FFT](https://github.com/mdurande/coarse-grained-anisotropy-and-size-using-FFT) , original code 
 as developed and described in the article: 
     [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
 
@@ -23,7 +23,7 @@ two sets of fully segmented images, from Drosophila pupa and chicken embryo; the
 are robust. Perspectives include in vitro tissues, non-biological cellular patterns such as foams, and
 xyz stacks.
 
-This fork contains further developments by @cjwlab:
+This fork contains further developments by [@cjwlab](https://github.com/cjwlab):
 
 Original code by Durande (2017)
     
