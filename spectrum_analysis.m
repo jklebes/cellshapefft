@@ -18,7 +18,7 @@ if isempty(param.contour)                  % portion of code when a mask is not 
     for win = 1:regl    % for each subimage of the image
         x = Posi(win,1);  % get positionin x and y
         y = Posi(win,2);
-        FT = fft_adir(a(y:y+param.tile_size-1,x:x+param.tile_size-1)); % perform FT analysis
+        FT = fft_adir(a(y:y+param.tile_size-1,x:x+param.tile_size-1), param.stripe_sigma); % perform FT analysis
         start= floor(3/8*param.tile_size);  % return the middle 1/2 only
         spectra(:,:, win)= FT(start+1:start+spectsize,start+1:start+spectsize);
     end
@@ -31,20 +31,48 @@ else                                           % when a mask is required
     b = param.contour_reader.readSpecificImage(param.time_points(t_index));% load mask images
     b = im2double(b);
 
-    for win = 1:results.regl(t_index)
-        x = results.Posi(win,1,t_index);
-        y = results.Posi(win,2,t_index);
+    spectra = repmat(zeros(spectsize), [1 1 regl]);
+    for win = 1:regl
+        x = Posi(win,1);
+        y = Posi(win,2);
         if x==0 || y==0 || sum(sum(b(y:y+ param.tile_size-1,x:x+ param.tile_size-1)))...
-                <=0.70*param.tile_size^2; % Condition on the intensity of the subimages, ie: get rid of borders
-            spectrum =...
-                results.im_regav(t_index).c(win).spect+zeros(param.tile_size/4); % if condition not held, add zeros
+                <=0.70*param.tile_size^2 % Condition on the intensity of the subimages, ie: get rid of borders
+            % if condition not held, spectrum remains a zeros matrix
         else
-            FT = fft_adir(a(y:y+param.tile_size-1,x:x+param.tile_size-1));
-
-            spectrum=...
-                results.im_regav(t_index).c(win).spect+...
-                +FT(3/8*param.tile_size+1:5/8*param.tile_size,3/8*param.tile_size+1:5/8*param.tile_size);
+            FT = fft_adir(a(y:y+param.tile_size-1,x:x+param.tile_size-1), param.stripe_sigma);
+            start= floor(3/8*param.tile_size);
+            spectra(:,:, win)=FT(start+1:start+spectsize,start+1:start+spectsize);
         end
     end
 end
 end
+
+function [abs_im_fft] = fft_adir(im, sigma)
+            % abs_im_fft = fft_adir(im)
+            % function that computes the FT of an image
+
+            %--------------------------------------------------------------------------
+            %
+            % *INPUT*: + im the image on which to perform the fourier transform
+            %
+            % *OUTPUT*: + abs_im_fft the spectrum normalized
+            %
+            %--------------------------------------------------------------------------
+
+            if(isnan(im)==1)                % if image has NaN
+                abs_im_fft = NaN;
+            else
+                if ~isempty(sigma)
+                    im = imgaussfilt(im, sigma);
+                end
+                [p,~] = perdecomp(im);      % reduce image size effects by periodizing borders
+                im_fft = fftn(p);               % 2D fast fourier transform
+                im_fft_shift = fftshift(im_fft);% shifts the FT for representation purpose
+                abs_im_fft = abs(im_fft_shift); % takes the module
+                [~,ind]=max(abs_im_fft(:));     % finds index of the max
+                sumabs = sum(sum(abs_im_fft));  % computes total value
+                abs_im_fft(ind) = 0;            % puts center to zero
+
+                abs_im_fft = abs_im_fft/sumabs; % normalize the rest of the image
+            end
+        end

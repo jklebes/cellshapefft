@@ -13,11 +13,11 @@ classdef cellshapefft < handle
      > Should work as installed from github with sister projects (+utilities).
      > paralellized differently, each worker should run through all steps
      independently.  
-         > Time averaging of spectrums taken out temporarily.
+         > Time averaging of spectrums taken out (for now?)
          > Had to undo some of the one-file, one-object structure and make
          function files, for parallelization reasons.
-     > removed function variants
-     > notebooks, new GUI app for calibrating
+     > removed function variants, in particular made parallel variants the
+     only and main variant
     
     Code to analyse the cell deformation on large images with Fourier 
     transform. This code generates maps of cell deformation based on the 
@@ -32,7 +32,7 @@ classdef cellshapefft < handle
     To run the code:
         1. Create param struct. Empty values will use the defaults.
         2. Create cellshapefft object
-        3. Run analysis by calling method "full_analysis" or "full_analysis_chunks"
+        3. Run analysis by calling method "full_analysis"
     
     Example:
     
@@ -99,6 +99,10 @@ classdef cellshapefft < handle
                 param.scale = 150;  % scaling for cell deformation visualization
             end
 
+            if isempty(param.col)
+                param.col = 'yellow';  % scaling for cell deformation visualization
+            end
+
             if isempty(param.propor)
                 param.propor = 0.13;  % value of the percentile of points to keep
             end
@@ -111,8 +115,13 @@ classdef cellshapefft < handle
                 param.stripe = false;  % whether to mask for x- y- stripes
             end
 
-            if isempty(param.stripe)
+            if isempty(param.stripewidth)
                 param.stripewidth = 4;  % default number of fourier space pixels to mask
+            end
+
+
+            if isempty(param.stripe_sigma)
+                param.stripe_sigma = [];  % default number of fourier space pixels to mask
             end
 
             if isempty(param.strel)
@@ -124,7 +133,7 @@ classdef cellshapefft < handle
             end
 
             if isempty(param.sigma)
-                param.sigma = 0.8;  % sigma value in the gaussian soothing kernel
+                param.sigma = 0.8;  % sigma value in the gaussian smoothing kernel
             end
 
             if isempty(param.register)
@@ -133,6 +142,10 @@ classdef cellshapefft < handle
 
             if isempty(param.regsize)
                 param.regsize = 0;  %
+            end
+
+            if isempty(param.ellipse_fit)
+                param.ellipse_fit = false;
             end
 
             if isempty(param.ffmpeg_path)
@@ -145,6 +158,7 @@ classdef cellshapefft < handle
 
             obj.param = param;
             mkdir(obj.param.pathout);
+
             %save a copy of input files
             try
                 if ispc
@@ -167,7 +181,7 @@ classdef cellshapefft < handle
             obj.im_regav =[];
         end
 
-        function full_analysis_chunks(obj)
+        function full_analysis(obj)
             % This function is the main function of the program, it uses the parameters
             % determined in the preliminary analysis to perform the functions
             %
@@ -196,16 +210,19 @@ classdef cellshapefft < handle
             %        'proportion': value of the percentile of points to keep
             %        'strel': strel value in the soothing filter
             %
-            % *OUTPUT*:'Posi': a matrix of size regl x 2 x total number of images that
+            % *OUTPUT*: modifies the properties obj.Posi and obj.im_regav:
+            %          'Posi': a matrix of size (regl x 2) in case with no mask
+            %          or (regl x 2 x timepoints) in case with contour mask, that
             %          contains the positions of the center of the subimages at each
             %          times.
-            %          'im_regav: a structure containing field 'c' for each slice of
-            %          averaged spectrums. In c is found,an intricated structure
+            %          'im_regav: Structure array containing, for each timepoint, 
+            %          a structure 
             %          containing fields 'S' for the amplitude of the cell deformation,
             %          'angS' for the angle of the cell deformation, 'spect' for the
             %          average spectrum, 'a' for the half major axis of the ellipse in
             %          real space, 'b' the half minor axis of the ellipse in real
-            %          space, phi the angle of the ellipse.
+            %          space, phi the angle of the ellipse 
+            %          for each tile.
             %
             %--------------------------------------------------------------------------
             import utilities.expReader;
@@ -238,16 +255,27 @@ classdef cellshapefft < handle
             for t_ind = time_vector(1:obj.param.chunk_size:end)
                 time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
                 
-                param=obj.param; %take a copy out of the structs to send to each worker
+                param=obj.param; %take a copy of the structs to send to each worker
                 Posi = obj.Posi; %intentional, ignore the yellow suggestions
                 im_regav=obj.im_regav;
                 parfor c = time_lims(1):time_lims(2) %parfor (substitute 'for' for debugging only)
                     %per timepoint
-                    Posi_c=Posi(:,:,c);
+                    if ~isempty(param.contour)
+                        Posi_c=Posi(:,:,c);
+                    else
+                        Posi_c=Posi;
+                    end
                     regl = size(Posi_c,1);
                     spectra=spectrum_analysis(param, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
-                    results_tmp=def_analysis(param, spectra, regl, c);  % compute cell orientation subimages
-                    affich_result_parallel(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                    if ~param.ellipse_fit
+                        %inertia matrix route
+                        results_tmp=def_analysis(param, spectra, regl, c);  % compute cell orientation subimages
+                        affich_result_parallel(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                    else
+                        %ellipse fitting route
+                        results_tmp=size_analysis(param, spectra, regl, c);  % compute cell orientation subimages
+                        affich_size(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                    end
                     im_regav(:,c)=results_tmp;
                 end
                 obj.im_regav = im_regav;
@@ -278,34 +306,29 @@ classdef cellshapefft < handle
             % of the Result structure are filled.
             disp('Registering...');
 
-            rec = floor((1-obj.param.overlap)*obj.param.tile_size);                      % number of shared pixels between
+            overlap = floor((1-obj.param.overlap)*obj.param.tile_size);                      % number of shared pixels between
             % subimages
 
             if isempty(obj.param.contour)                  % if no mask is required
-
-                obj.regl = zeros(obj.param.tleng,1);   % number of subimages at each time
-                for t = 1:obj.param.tleng
-                    reg = 0;
-
-                    for x = 1:rec:(obj.param.siz(1)- obj.param.tile_size+1)    % register position
-                        for y = 1:rec:(obj.param.siz(2)- obj.param.tile_size+1)
-                            reg = reg+1;
-                            obj.Posi(reg,:,t) = [x,y];
-                        end
-                    end
-                    obj.regl(t) = reg;               % register number of subimages at each time
-                end
+                    x = 1:overlap:(obj.param.siz(1)- obj.param.tile_size+1);
+                    y = 1:overlap:(obj.param.siz(2)- obj.param.tile_size+1);
+                    [X,Y] = meshgrid(x,y);
+                    positions = [X(:) Y(:)];
+                    obj.regl=size(positions,1) ;
+                    obj.Posi(1:obj.regl,:) =  [X(:) Y(:)];
+             % register number of subimages at each time
+                %only one value - should be same number of subimages each
+                %timepoint
 
             else                                        % when a mask is required
 
                 obj.regl = zeros(obj.param.tleng,1);
                 for t = 1:obj.param.tleng
-                    reg = 1; % 0 in original
                     b = obj.param.contour_reader.readSpecificImage(obj.param.time_points(t)); % load mask images
                     b = im2double(b);
 
-                    x = 1:rec:(obj.param.siz(1)- obj.param.tile_size+1);
-                    y = 1:rec:(obj.param.siz(2)- obj.param.tile_size+1);
+                    x = 1:overlap:(obj.param.siz(1)- obj.param.tile_size+1);
+                    y = 1:overlap:(obj.param.siz(2)- obj.param.tile_size+1);
                     [X,Y] = meshgrid(x,y);
 
                     mask = imresize(b, size(X))>=0.5;
@@ -314,279 +337,14 @@ classdef cellshapefft < handle
 
                     positions = [X(:) Y(:)];
                     positions(prod(positions,2)==0,:) = [];
-                    obj.Posi(reg:size(positions,1),:,t) = positions;
                     reg = size(positions,1);
-
-                    %                     for x = 1:rec:(obj.param.siz(1)- obj.param.tile_size+1)
-                    %                         for y = 1:rec:(obj.param.siz(2)- obj.param.tile_size+1)
-                    %                              if sum(sum(b(y:y+ obj.param.tile_size-1,x:x+ obj.param.tile_size-1)))<=0.70*obj.param.tile_size^2
-                    %                              % Condition on the intensity of the subimages, ie: get rid of borders
-                    %                              % if condition not held, don't register position
-                    %                              else
-                    %                                  reg = reg+1;
-                    %                                  obj.results.Posi(reg,:,t) = [x,y];
-                    %                              end
-                    %                         end
-                    %                     end
+                    obj.Posi(1:reg,:,t) = positions;
                     obj.regl(t) = reg;
 
                 end
             end
         end
 
-        function size_analysis(obj)
-            % results = def size_analysis(obj.param,results)
-            % Function that computes the ellipse for the siz representation
-            % on each averaged subimage,  fills the im_regav structure with the fields
-            % a, b, phi
-            %
-            % *OUTPUT*:+ results
-            %--------------------------------------------------------------------------
-
-            for c = 1:obj.results.ci                                   % for each averaged time
-                display(['Computation of cell size, time: ',num2str(c)]); % for the user to keep track
-                for re = 1:obj.results.regl(1+obj.param.timestep*(c-1))     % for each region
-                    if sum(sum(to_fill.c(re).spect))==0 % if the spectrum is empty
-                        to_fill.c(re).a = 0;            % don't register a, b, phi
-                        to_fill.c(re).b = 0;
-                        to_fill.c(re).phi = 0;
-
-                    else
-                        [to_fill.c(re).a,to_fill.c(re).b,...
-                            to_fill.c(re).phi] =...
-                            obj.size_def(to_fill.c(re).spect,obj.param);
-                        % then compute
-                        % the cell size
-                        % parameters
-                    end
-
-                end
-            end
-        end
-
-        function affich_size(obj, col)
-            % affich_size(obj.param,results,col)
-            % A function that plots maps of cell size, registers the figures
-            % as .png and .fig
-            %
-            % + col the colour for the plot of the cell size
-
-            for c = 1:obj.results.ci                            % for each averaged time
-                display(['Representation of size map, time: ',num2str(c)]); % for the user to keep track
-                Figure = figure(20);                            % Open figure
-                imshow(ones(obj.param.siz(2),obj.param.siz(1)));        % Initialize figure with zeros, same size as the original
-                hold on                                         % wait
-
-                for win =1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2); % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2);
-
-                    a = obj.results.im_regav(c).c(win).a;    % extract half major axis
-                    b = obj.results.im_regav(c).c(win).b; % extract half minor axis
-                    phi = obj.results.im_regav(c).c(win).phi; % extract angle
-
-
-                    obj.f_ellipseplotax(obj,a,b,xo,yo,phi,col,0.5,Figure.CurrentAxes);
-                end
-                set(gca,'XTickLabel','','YTickLabel','');
-                X3 = [obj.param.siz(1)-250 obj.param.siz(1)-100];
-                Y3 = [obj.param.siz(2)-250 obj.param.siz(2)-250];
-                plot(X3,Y3,'.b-','LineWidth',1);                                   % scaling bar
-                text(obj.param.siz(1)-250,obj.param.siz(2)-300,'0.5','Color','black','FontSize',12);
-                img = getframe(gcf);
-                imwrite(img.cdata, [obj.param.pathout  ['Size_map' num2str(obj.param.timestep) '_'] num2str(c) '.png']); % save image png
-                savefig(Figure,[obj.param.pathout   ['Size_map' num2str(obj.param.timestep) '_'] num2str(c) '.fig'])     % save image fig
-                close(Figure);
-
-            end
-        end
-
-        function affich_result_original(obj)
-            % affich_result(obj.param,results,col)
-            % A function that plots maps of cell deformations, registers the figures
-            % as .png and .fig
-            %          + col the colour for the plot of the cell deformation
-            %
-            %--------------------------------------------------------------------------
-            col = [0.9490    0.7294    0.0471];
-            for c = 1:obj.results.ci                            % for each averaged time
-                display(['Representation of deformation map, time: ',num2str(c)]); % for the user to keep track
-
-                Figure = figure(20);                            % Open figure
-                %                 imshow(ones(obj.param.siz(2),obj.param.siz(1)));        % Initialize figure with zeros, same size as the original
-                imshow(obj.param.reader.readSpecificImage(c));
-                hold on                                         % wait
-                for win =1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2); % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2);
-
-                    amp = obj.results.im_regav(c).c(win).S;    % extract amplitude
-                    ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
-
-                    x1 = xo+cos(ang+pi/2)*amp*obj.param.scale; % define the extremities for the plot of deformation
-                    y1 = yo+sin(ang+pi/2)*amp*obj.param.scale;
-                    x2 = xo-cos(ang+pi/2)*amp*obj.param.scale;
-                    y2 = yo-sin(ang+pi/2)*amp*obj.param.scale;
-
-                    X1 = [xo,x1];
-                    Y1 = [yo,y1];
-                    X2 = [xo,x2];
-                    Y2 = [yo,y2];
-
-                    plot(X1,Y1,'Marker','.','LineStyle','-','Color',col,'LineWidth',3); % map cell deformation top half
-                    plot(X2,Y2,'Marker','.','LineStyle','-','Color',col,'LineWidth',3); % map cell deformation bottom half
-
-                end
-
-                set(gca,'XTickLabel','','YTickLabel','');
-                X3 = [obj.param.siz(1)-250 obj.param.siz(1)-100];
-                Y3 = [obj.param.siz(2) obj.param.siz(2)];
-                plot(X3,Y3,'.b-','LineWidth',1);                                   % scaling bar
-                text(obj.param.siz(1)-250,obj.param.siz(2),'0.5','Color','black','FontSize',12);
-
-                img = getframe(gcf);
-                imwrite(img.cdata, [obj.param.pathout  ['Deformation_map' num2str(obj.param.timestep) '_'] num2str(c) '.png']); % save image png
-                savefig(Figure,[obj.param.pathout   ['Deformation_map' num2str(obj.param.timestep) '_'] num2str(c) '.fig'])     % save image fig
-                close(Figure);
-
-            end
-        end
-
-      
-        function affich_result_alt_bg(obj, path_alt_bg, out_folder)
-            % affich_result(obj.param,results,col)
-            % A function that plots maps of cell deformations, registers the figures
-            % as .png and .fig
-            %          + col the colour for the plot of the cell deformation
-            %
-            %--------------------------------------------------------------------------
-            eR = expReader(path_alt_bg);
-            mkdir(out_folder);
-
-            %             col = round(255*[0.2235    0.8588         0]);
-            for c = 1:obj.results.ci                            % for each averaged time
-                display(['Representation of deformation map, time: ',num2str(obj.param.time_points(c))]); % for the user to keep track
-                I = eR.readSpecificImage(obj.param.time_points(c));
-
-                line_array = zeros(obj.results.regl((c-1)*(obj.param.timestep)+1), 4);
-                for win = 1:obj.results.regl((c-1)*(obj.param.timestep)+1) % for each subimage
-                    xo =  obj.results.Posi(win,1,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2); % find positions of the center of the subimages
-                    yo =  obj.results.Posi(win,2,(c-1)*(obj.param.timestep)+1)+floor(obj.param.tile_size/2);
-
-                    amp = obj.results.im_regav(c).c(win).S;    % extract amplitude
-                    ang = obj.results.im_regav(c).c(win).angS; % extract angle of deformation
-
-                    x1 = xo+cos(ang+pi/2)*amp*obj.param.scale; % define the extremities for the plot of deformation
-                    y1 = yo+sin(ang+pi/2)*amp*obj.param.scale;
-                    x2 = xo-cos(ang+pi/2)*amp*obj.param.scale;
-                    y2 = yo-sin(ang+pi/2)*amp*obj.param.scale;
-
-                    line_array(win,:) = [x1 y1 x2 y2];
-                end
-                RGB = insertShape(I, 'line', line_array, 'LineWidth', 10, 'Color', 'green');
-                imwrite(RGB, [out_folder filesep 'img_' num2str(obj.param.time_points(c), '%04d') '.png']);
-
-            end
-        end
-
-        %% Support functions
-
-        function [a,b,phi]= size_def(obj,abs_im_fft_w, param)
-            % [a,b,phi]= size_def(abs_im_fft_w,obj.param)
-            % Function that computes the halm major and minor axis in the direct space
-            % based on a search of local maxima and a fit of ellipse on those local
-            % maxima.
-            %
-            % abs_im_fft_w is a spectrum on which to find the local maximas
-
-            % *OUTPUT*:+ a the half major axis in the direct space
-            %          + b the half minor axis in the direct space
-            %          + phi the angle of the ellipse
-            %--------------------------------------------------------------------------
-
-            [yu,xu] = localMaximum_h(abs_im_fft_w,2,0,40);
-            [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);
-            a = floor(obj.param.tile_size/2)*1/ai;
-            b =floor(obj.param.tile_size/2)*1/bi;
-        end
-
-        function [hEllipse,hAxes] = f_ellipseplotax(obj,a,b,x0,y0,phi,col,ldw,axh)
-            %  Isabelle Bonnet
-            %  Begin: 2009/10/12
-            %  Draw an ellipse with given parameters.
-            %
-            %   Input parameters:
-            %       a           Value of the HALF-major axis
-            %       b           Value of the HALF-minor axis
-            %       x0          Abscissa of the center of the ellipse
-            %       y0          Ordinate of the center of the ellipse
-            %       phi         Angle between X-axis and the MAJOR axis - units: RADIANS
-            %       lineStyle   Definition of the plotted line style
-            %
-            %   Output:
-            %       h    Handle of the ellipse
-            %
-            %  Usage:
-            %       f_ellipseplot(maxi,mini,a,b,phi);
-            %       or
-            %       hEllipse = f_ellipseplot(5,3,1,-2,pi/4);
-            %       set(h,'LineWidth',2);
-            %   A slight change added by Melina Durande regarding the handling of the
-            %   axes and the gestion of the colors and line width
-            %
-
-
-            if (nargin < 2)|(nargin > 8),
-                error('Please see help for INPUT DATA.');
-                return;
-            end
-
-            angle = [-0.003:0.01:2*pi];
-
-            % parametric equation of the ellipse
-            %----------------------------------------
-            x = a*cos(angle);
-            y = b*sin(angle);
-
-
-            % Coordinate transform
-            %----------------------------------------
-            X = cos(phi)*x - sin(phi)*y;
-            Y = sin(phi)*x + cos(phi)*y;
-            X = X + x0;
-            Y = Y + y0;
-
-
-            % Plot the ellipse
-            %----------------------------------------
-            hEllipse = plot(X,Y,'Color',col,'parent',axh);
-            set(hEllipse,'LineWidth',ldw);
-            axis equal;
-
-            %%% Add lines representing the major and minor axes of an
-            % ellipse on the current plot.
-
-            % INPUT
-            %   axes      [major minor] axes of the ellipse
-
-            % Major Axis coordinates
-            x_maj = a*cos(phi);
-            y_maj = a*sin(phi);
-
-            % Draw the line
-            Major = line(x_maj*[-1 1]+x0,y_maj*[-1 1]+ y0,'Color',col,'parent',axh);
-            set(Major,'LineWidth',ldw);
-
-            % Minor Axis coordinates
-            x_min = b*cos(phi+pi/2);
-            y_min = b*sin(phi+pi/2);
-
-            % Draw the line
-            Minor = line(x_min*[-1 1]+ x0,y_min*[-1 1]+ y0,'Color',col,'parent',axh);
-            set(Minor,'LineWidth',ldw);
-            % Return the line element handles so it can be customized.
-            hAxes = [Major Minor];
-        end
 
     end
 end
