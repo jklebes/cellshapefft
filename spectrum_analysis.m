@@ -7,7 +7,6 @@ function spectra=spectrum_analysis(param, regl, Posi, spectsize, t_index)
 %
 % *OUTPUT*: results
 %--------------------------------------------------------------------------
-
 if isempty(param.contour)                  % portion of code when a mask is not required
     display(['Computation of FT, time: ',num2str(t_index)]);% for the user to keep track
 
@@ -58,7 +57,7 @@ function [abs_im_fft] = fft_adir(im, sigma)
             % *OUTPUT*: + abs_im_fft the spectrum normalized
             %
             %--------------------------------------------------------------------------
-
+            import utilities.perdecomp;
             if(isnan(im)==1)                % if image has NaN
                 abs_im_fft = NaN;
             else

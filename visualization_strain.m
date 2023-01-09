@@ -1,4 +1,4 @@
-function affich_result_parallel(param, im_regav_c, Posi, regl, out_folder, c)
+function visualization_strain(param, im_regav_c, Posi, regl, out_folder, c)
 % affich_result(obj.param,results,col)
 % A function that plots maps of cell deformations, registers the figures
 % as .png and .fig

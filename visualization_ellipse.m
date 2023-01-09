@@ -1,4 +1,4 @@
-function affich_size(obj, col)
+function visualization_ellipse(obj, col)
 % affich_size(obj.param,results,col)
 % A function that plots maps of cell size, registers the figures
 % as .png and .fig

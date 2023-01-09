@@ -52,13 +52,11 @@ Images should be either .png or .tiff .tif (stacks are okay)
 * Install matlab 
 * Download package ``+utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
 * Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If localy installed and not on path, the full ffmpeg_path can be input manually.
-* Download this repository.
+* Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``perdecomp.m`` is contained in the utilities package, another copy is shipped here.
 
 ### How to use it in practice
 To run the code:
-* Create param struct, as in ``call_cellshape_fft.m`` .  Empty values will use the defaults as set in ``cellshapefft``.
-* Create cellshapefft object
-* Run analysis by calling method "full_analysis" or "full_analysis_chunks"
+* The file to execute is ``call_cellshape_fft.m``.  Inside this file, we create the ``param`` struct holding all user input paramteres and an object ``cellshapefft``. We then run the analysis by calling method "full_analysis" or "full_analysis_chunks".  Or the user can otherwise build a ``param`` struct, create a  ``cellshapefft``  object, and call the ``cellshapefft.full_analysis`` method.
         
 ```
     Example:

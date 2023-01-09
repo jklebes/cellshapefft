@@ -1,4 +1,4 @@
-function size_analysis(param, t)
+function deformation_ellipse(param, t)
 % results = def size_analysis(obj.param,results)
 % Function that computes the ellipse for the siz representation
 % on each averaged subimage,  fills the im_regav structure with the fields

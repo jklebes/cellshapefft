@@ -11,32 +11,31 @@ if ispc
 else
     param.ffmpeg_path = [];
 end
-param.siz = [];
+
 param.time_points = [1:220];
+param.method = []; %choose between ellipse-fitting and inertia matrix
+                        %analysis (see paper). "ellipse", "matrix", or "radon"
+param.workers = 16;
 param.chunk_size = 48; %ideally multiple of number of workers
-param.tleng = [];
-param.timestep = [];
+
 param.tile_size = []; %size of tiles.
-param.overlap=[];
-param.fres = [];
-param.cut = [];
-param.propor = [];
+param.overlap= [];
+param.cut = []; %masking a circle in the middle of Fourier spectrum
+param.propor = []; 
 param.threshold = []; %in addition to keeping top propor% of points, 
                       %to dealt with varying signal-noise ration ignore 
                       %intensities below this threshold
 param.stripe =true ; %bool - mask x and y stripes on Fourier spectrum
 param.stripewidth = [];
 param.sigma = [];
-param.stripe_sigma = 3; %blue real space tiles to remove stripe artfact
+param.stripe_sigma = 3; %blur real space tiles to remove stripe artfact
+param.strel = [];
+%scale, color of lines to draw in visualization:
 param.scale = [];
 param.col=[];
-param.strel = [];
+
 param.register = []; %to choose whether spectrum data is saved
 param.regsize = []; %??
-param.ellipse_fit = []; %choose between ellipse-fitting and inertia matrix
-                        %analysis (see paper).  True/1 for ellipse route, 
-                        % false/0/[] (default) for inertia matrix route.
-param.workers = 16;
 
 obj = cellshapefft(param);
 obj.full_analysis;

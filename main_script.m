@@ -1,5 +1,4 @@
 %% Initialization
-
 clear all 
 close all
 addpath('FTgui')

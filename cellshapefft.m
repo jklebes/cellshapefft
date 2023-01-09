@@ -46,7 +46,6 @@ classdef cellshapefft < handle
     param.tleng = [];
     param.timestep = [];
     param.tile_size = [];
-    param.fres = [];
     param.cut = [];
     param.propor = [];
     param.sigma = [];
@@ -79,12 +78,11 @@ classdef cellshapefft < handle
                 param.time_points = param.reader.timePoints;
             end
 
+            param.tleng = size(param.time_points,1);
+            
+
             if isempty(param.chunk_size) % indices of images to analyze
                 param.chunk_size = 48;
-            end
-
-            if isempty(param.tleng) % number of images to analyze
-                param.tleng = length(param.time_points);
             end
 
             if isempty(param.tile_size)
@@ -144,8 +142,8 @@ classdef cellshapefft < handle
                 param.regsize = 0;  %
             end
 
-            if isempty(param.ellipse_fit)
-                param.ellipse_fit = false;
+            if isempty(param.method)
+                param.method = "matrix";
             end
 
             if isempty(param.ffmpeg_path)
@@ -258,7 +256,7 @@ classdef cellshapefft < handle
                 param=obj.param; %take a copy of the structs to send to each worker
                 Posi = obj.Posi; %intentional, ignore the yellow suggestions
                 im_regav=obj.im_regav;
-                parfor c = time_lims(1):time_lims(2) %parfor (substitute 'for' for debugging only)
+                parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
                     %per timepoint
                     if ~isempty(param.contour)
                         Posi_c=Posi(:,:,c);
@@ -267,16 +265,22 @@ classdef cellshapefft < handle
                     end
                     regl = size(Posi_c,1);
                     spectra=spectrum_analysis(param, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
-                    if ~param.ellipse_fit
+                    switch param.method
+                        case "matrix"
                         %inertia matrix route
-                        results_tmp=def_analysis(param, spectra, regl, c);  % compute cell orientation subimages
-                        affich_result_parallel(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
-                    else
+                        results_tmp=deformation_matrix(param, spectra, regl, c);  % compute cell orientation subimages
+                        visualization_strain(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                        case "ellipse"
                         %ellipse fitting route
-                        results_tmp=size_analysis(param, spectra, regl, c);  % compute cell orientation subimages
-                        affich_size(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                        results_tmp=deformation_ellipse(param, spectra, regl, c);  % compute cell orientation subimages
+                        visualization_ellipse(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                        case "radon"
+                        results_tmp=deformation_radon(param, spectra, regl, c);  %TODO invent radon transform method
+                        otherwise
+                            disp("please input 'matrix', 'ellipse', or 'radon' as param.method")
+                            exit() 
                     end
-                    im_regav(:,c)=results_tmp;
+                    im_regav(:,c) = results_tmp;
                 end
                 obj.im_regav = im_regav;
                 %once per chunk
