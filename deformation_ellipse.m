@@ -1,4 +1,4 @@
-function deformation_ellipse(param, t)
+function abphi =deformation_ellipse(param, spectra, regl)
 % results = def size_analysis(obj.param,results)
 % Function that computes the ellipse for the siz representation
 % on each averaged subimage,  fills the im_regav structure with the fields
@@ -7,18 +7,14 @@ function deformation_ellipse(param, t)
 % *OUTPUT*:+ results
 %--------------------------------------------------------------------------
 
-display(['Computation of cell size, time: ',num2str(param.time_points(c))]); % for the user to keep track
-im_regav_c = repmat(struct('spect', [], 'S', [], 'angS', [], 'a', [], 'b', [], 'phi', []), regl, 1);
-for re = 1:obj.results.regl(t)     % for each region
-    if sum(sum(to_fill.c(re).spect))==0 % if the spectrum is empty
-        im_regav_c(re).a = 0;            % don't register a, b, phi
-        im_regav_c(re).b = 0;
-        im_regav_c(re).phi = 0;
+abphi = zeros(3,regl);
+for re = 1:regl     % for each region
+    if sum(sum(spectra(:,:,re)))==0 % if the spectrum is empty
+        abphi= [0;0;0];
 
     else
-        [im_regav_c.a,im_regav_c.b,...
-            im_regav_c.phi] =...
-            size_def(im_regav_c.spect,param);
+        [a b phi] = size_def(spectra(:,:,re),param);
+        abphi(:,re) = [a b phi];
         % then compute
         % the cell size
         % parameters
@@ -80,7 +76,7 @@ function [varargout]=ellipsefit(x,y)
 x=x(:); % convert data to column vectors
 y=y(:);
 if numel(x)~=numel(y) || numel(x)<5
-   error('X and Y Must be the Same Length and Contain at Least 5 Values.')
+    error('X and Y Must be the Same Length and Contain at Least 5 Values.')
 end
 D1=[x.*x x.*y y.*y]; % quadratic terms
 D2=[x y ones(size(x))]; % linear terms
@@ -89,8 +85,8 @@ S2=D1'*D2;
 
 [Q2,R2]=qr(D2,0);
 if condest(R2)>1.0e10
-   warning('ellipsefit',...
-      'Data is Poorly Conditioned and May Not Represent an Ellipse.')
+    warning('ellipsefit',...
+        'Data is Poorly Conditioned and May Not Represent an Ellipse.')
 end
 T=-R2\(R2'\S2'); % -inv(S3) * S2'
 
@@ -127,9 +123,9 @@ A=AB(1);
 B=AB(2);
 Phi=-Phi;
 if A<B % x-axis not major axis, so rotate it pi/2
-   Phi=Phi-sign(Phi)*pi/2;
-   A=AB(2);
-   B=AB(1);
+    Phi=Phi-sign(Phi)*pi/2;
+    A=AB(2);
+    B=AB(1);
 end
 S.Xc=Xc;
 S.Yc=Yc;
@@ -138,9 +134,101 @@ S.B=B;
 S.Phi=Phi;
 S.P=P;
 if nargout==1
-   varargout{1}=S;
+    varargout{1}=S;
 else
-   outcell=struct2cell(S);
-   varargout=outcell(1:nargout);
+    outcell=struct2cell(S);
+    varargout=outcell(1:nargout);
+end
+end
+
+function varargout = localMaximum_h(x,minDist, exculdeEqualPoints,number)
+% function varargout = localMaximum(x,minDist, exculdeEqualPoints)
+%
+% This function returns the indexes\subscripts of local maximum in the data x.
+% x can be a vector or a matrix of any dimension
+%
+% minDist is the minimum distance between two peaks (local maxima)
+% minDist should be a vector in which each argument corresponds to it's
+% relevant dimension OR a number which is the minimum distance for all
+% dimensions
+%
+% exculdeEqualPoints - is a boolean definning either to recognize points with the same value as peaks or not
+% x = [1     2     3     4     4     4     4     4     4     3     3     3     2     1];
+%  will the program return all the '4' as peaks or not -  defined by the 'exculdeEqualPoints'
+% localMaximum(x,3)
+% ans =
+%      4     5     6     7     8     9    11    12
+%
+%  localMaximum(x,3,true)
+% ans =
+%      4     7    12
+%
+%
+% Example:
+% a = randn(100,30,10);
+% minDist = [10 3 5];
+% peaks = localMaximum(a,minDist);
+%
+% To recieve the subscript instead of the index use:
+% [xIn yIn zIn] = localMaximum(a,minDist);
+%
+% To find local minimum call the function with minus the variable:
+% valleys = localMaximum(-a,minDist);
+
+if nargin < 3
+    exculdeEqualPoints = false;
+    if nargin < 2
+        minDist = size(x)/10;
+    end
+end
+
+if isempty(minDist)
+    minDist = size(x)/10;
+end
+
+dimX = length ( size(x) );
+if length(minDist) ~= dimX
+    % In case minimum distance isn't defined for all of x dimensions
+    % I use the first value as the default for all of the dimensions
+    minDist = minDist( ones(dimX,1) );
+end
+
+% validity checks
+minDist = ceil(minDist);
+minDist = max( [minDist(:)' ; ones(1,length(minDist))] );
+minDist = min( [minDist ; size(x)] );
+
+% ---------------------------------------------------------------------
+if exculdeEqualPoints
+
+    % this section comes to solve the problem of a plato
+    % without this code, points with the same hight will be recognized as peaks
+    y = sort(x(:));
+    dY = diff(y);
+    % finding the minimum step in the data
+    minimumDiff = min( dY(dY ~= 0) );
+    %adding noise which won't affect the peaks
+    x = x + rand(size(x))*minimumDiff;
+end
+% ---------------------------------------------------------------------
+
+
+se = ones(minDist);
+X = imdilate(x,se);
+% figure
+% imagesc(X(:,:,20))
+% figure
+% imagesc(x)
+f = find(x == X);
+
+[~ ,order] = sort(x(f),'descend');
+ind      = f(order(1:min(number,end)));
+
+
+if nargout
+    [varargout{1:nargout}] = ind2sub( size(x), ind);
+
+else
+    varargout{1} = f;
 end
 end

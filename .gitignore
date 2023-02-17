@@ -3,7 +3,11 @@
 *.fig
 *.png
 
+#while in development
+*.mlapp
+
 *.asv
+*.mlx
 
 FTgui/
 profile*/

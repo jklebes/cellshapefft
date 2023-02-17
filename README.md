@@ -51,8 +51,8 @@ Images should be either .png or .tiff .tif (stacks are okay)
 ### Installing
 * Install matlab 
 * Download package ``+utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
-* Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If localy installed and not on path, the full ffmpeg_path can be input manually.
-* Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``perdecomp.m`` is contained in the utilities package, another copy is shipped here.
+* Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If locally installed and not on path, the full ffmpeg_path can be input manually.
+* Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``perdecomp.m`` is contained in the +utilities package, another copy is shipped here.
 
 ### How to use it in practice
 To run the code:
@@ -88,7 +88,7 @@ To run the code:
 
 ## Outputs
 
-* a directory ``results_averageon_<tleng>_averageon_<timestep>`` is created in the output path
+* a ``results_TIMESTAMP`` director is created in the output path
 * TIF stacks of images ``Deformation_map...`` and ``Deformation_map_onim...``
 * A snapshot of the GUI if used
 * ``Param.mat``, saving input parameters

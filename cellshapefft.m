@@ -80,13 +80,16 @@ classdef cellshapefft < handle
 
             param.tleng = size(param.time_points,1);
             
+            if isempty(param.time_avg) %sliding average over how many time points
+                param.time_avg = 1; %equivalent to no averaging
+            end
 
             if isempty(param.chunk_size) % indices of images to analyze
                 param.chunk_size = 48;
             end
 
             if isempty(param.tile_size)
-                param.tile_size = 256; % size of subimages
+                param.tile_size = 128; % size of subimages
             end
 
             if isempty(param.overlap) % indices of images to analyze
@@ -109,25 +112,12 @@ classdef cellshapefft < handle
                 param.cut = 2;  % size of the cut around the center of the Fourier spectrum
             end
 
-            if isempty(param.stripe)
-                param.stripe = false;  % whether to mask for x- y- stripes
-            end
-
-            if isempty(param.stripewidth)
-                param.stripewidth = 4;  % default number of fourier space pixels to mask
-            end
-
-
-            if isempty(param.stripe_sigma)
-                param.stripe_sigma = [];  % default number of fourier space pixels to mask
-            end
-
             if isempty(param.strel)
                 param.strel = 4;  % strel value in the soothing filter
             end
 
-            if isempty(param.threshold)
-                param.threshold = 0;  % intensity threshold for FT pixels
+            if isempty(param.stripe_sigma)
+                param.stripe_sigma = [];  % sigma value in the gaussian smoothing kernel
             end
 
             if isempty(param.sigma)
@@ -162,14 +152,34 @@ classdef cellshapefft < handle
                 if ispc
                     system(['copy /b call_cellshape_fft.m ' obj.param.pathout filesep]);
                     system(['copy /b cellshapefft.m ' obj.param.pathout filesep]);
+                    system(['copy /b spectrum_analysis.m ' obj.param.pathout filesep]);
+                    switch param.method
+                        case "matrix"
+                            system(['copy /b S_angS.m ' obj.param.pathout filesep]);
+                            system(['copy /b inertia_matp_sigma.m ' obj.param.pathout filesep]);
+                        case "ellipse"
+                            system(['copy /b deformation_ellipse.m ' obj.param.pathout filesep]);
+                        case "radon"
+                            system(['copy /b deformation_radon.m ' obj.param.pathout filesep]);
+                    end
                 else %unix
-                    system(['cp ./call_cellshape_fft.m' obj.param.pathout filesep]);
-                    system(['cp ./cellshapefft.m' obj.param.pathout filesep]);
+                    system(['cp ./call_cellshape_fft.m ' obj.param.pathout filesep]);
+                    system(['cp ./cellshapefft.m ' obj.param.pathout filesep]);
+                    system(['cp ./spectrum_analysis.m ' obj.param.pathout filesep]);
+                    switch param.method
+                        case "matrix"
+                            system(['cp ./S_angS.m ' obj.param.pathout filesep]);
+                            system(['cp ./inertia_matp_sigma.m ' obj.param.pathout filesep]);
+                        case "ellipse"
+                            system(['cp ./deformation_ellipse.m ' obj.param.pathout filesep]);
+                        case "radon"
+                            system(['cp ./deformation_radon.m ' obj.param.pathout filesep]);
+                    end
                 end
             catch
                 %if pathing problems, skip
-                disp(["Problems encountered while attempting to copy call_cellshape_fft.m and/or cellshapefft.m to" ...
-                    obj.param.pathout ", input file and/or code was not saved"])
+                disp(["Problems encountered while attempting to copy code files to" ...
+                    obj.param.pathout ", code was not saved"])
             end
 
             info = imfinfo(obj.param.reader.fileName); % get information about the images
@@ -239,63 +249,138 @@ classdef cellshapefft < handle
             %TODO could make part of parallel loop, esp in case with mask
 
             spectsize=ceil(obj.param.tile_size/4);
-            obj.im_regav = repmat(struct(repmat(struct('spect',[],'S',[]...
-                ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.regl),1)),1,obj.param.tleng);
+            %obj.im_regav = repmat(struct(repmat(struct('S',[]...
+            %    ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.regl),1)),1,obj.param.tleng);
             % Initialization of the structure im_regav, containing spectrums
             % cell deformations and sizes for each averaged subimage
+            %instead 2 or 3 arrays to hold results
+            resultsdims = [max(obj.regl), obj.param.tleng];
 
             %from affich - prepare diretory to save images in
             out_folder = [obj.param.pathout filesep 'img'];
             mkdir(out_folder);
 
             time_vector = obj.param.time_points;
-            %chunk
-            for t_ind = time_vector(1:obj.param.chunk_size:end)
-                time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
-                
-                param=obj.param; %take a copy of the structs to send to each worker
-                Posi = obj.Posi; %intentional, ignore the yellow suggestions
-                im_regav=obj.im_regav;
-                parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
-                    %per timepoint
-                    if ~isempty(param.contour)
-                        Posi_c=Posi(:,:,c);
-                    else
-                        Posi_c=Posi;
-                    end
-                    regl = size(Posi_c,1);
-                    spectra=spectrum_analysis(param, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
-                    switch param.method
-                        case "matrix"
+            quality = zeros([resultsdims]);
+            switch obj.param.method
+                case "matrix"
+                    %create variables
+                    inertia_matrix = zeros([2 2 resultsdims]);
+                    SangS = zeros([2 resultsdims]);
+
+                    %parfor and save chunks
+                    %chunk
+                    for t_ind = time_vector(1:obj.param.chunk_size:end)
+                        time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+
+                        param=obj.param; %take a copy of the structs to send to each worker
+                        Posi = obj.Posi; %intentional, ignore the yellow suggestions
+                    
+                    parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
+                        %per timepoint
+                        if ~isempty(param.contour)
+                            Posi_c=Posi(:,:,c);
+                        else
+                            Posi_c=Posi;
+                        end
+                        regl = size(Posi_c,1);
                         %inertia matrix route
-                        results_tmp=deformation_matrix(param, spectra, regl, c);  % compute cell orientation subimages
-                        visualization_strain(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
-                        case "ellipse"
-                        %ellipse fitting route
-                        results_tmp=deformation_ellipse(param, spectra, regl, c);  % compute cell orientation subimages
-                        visualization_ellipse(param, results_tmp, Posi_c, regl, out_folder, c); % create maps of cell orientations
-                        case "radon"
-                        results_tmp=deformation_radon(param, spectra, regl, c);  %TODO invent radon transform method
-                        otherwise
-                            disp("please input 'matrix', 'ellipse', or 'radon' as param.method")
-                            exit() 
+                        spectra=spectrum_analysis(param, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
+                        %here save spectra in chunks if applicable
+                        [inertia_matrix(:,:,:,c), quality(:, c)] = inertia_matp_sigma(param, spectra, regl);  % compute cell orientation subimages
                     end
-                    im_regav(:,c) = results_tmp;
-                end
-                obj.im_regav = im_regav;
-                %once per chunk
-                obj.save_chunk(time_lims)    % save results
-                %obj.results = struct('regl',[],'Posi',[],'im_regav',[],'ci',[]); % result structure
+                    end
+
+                    %time average
+                    inertia_matrix=movmean(inertia_matrix, obj.param.time_avg, 4);
+                    quality=movmean(quality, obj.param.time_avg, 2);
+                    
+                    %transform quality scores to range 0 to 1 for
+                    %visualization
+                    quality=rescale(quality);
+
+                    for t_ind = time_vector(1:obj.param.chunk_size:end) %another chunked process
+                        time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+                        %parfor to process and visualize
+                        param=obj.param; %take a copy of the structs to send to each worker
+                        Posi = obj.Posi;
+                        regl = obj.regl; %intentional, ignore the yellow suggestions
+                        parfor c = time_lims(1):time_lims(2) %parfor
+                            if ~isempty(param.contour)
+                                Posi_c=Posi(:,:,c);
+                            else
+                                Posi_c=Posi;
+                            end
+                            SangS_c = S_angS(inertia_matrix(:,:,:,c), regl);
+                            visualization_strain(param, SangS_c, quality(:, c), Posi_c, regl, out_folder, c); % create maps of cell orientations
+                            SangS(:,:,c) = SangS_c;
+                        end
+                        obj.save_chunk(inertia_matrix, time_lims)    % save results (time-averaged)
+                    end
+                    
+                    obj.im_regav = struct('S', SangS(1,:,:), 'angS', SangS(2,:,:));
+                case "ellipse"
+                    abphi = zeros([3 resultsdims]); %create variables
+                    SangS = zeros([2 resultsdims]);
+
+                    %parfor and save chunks
+                    %chunk
+                    for t_ind = time_vector(1:obj.param.chunk_size:end)
+                        time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+
+                        param=obj.param; %take a copy of the structs to send to each worker
+                        Posi = obj.Posi; %intentional, ignore the yellow suggestions
+                    
+                    parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
+                        %per timepoint
+                        if ~isempty(param.contour)
+                            Posi_c=Posi(:,:,c);
+                        else
+                            Posi_c=Posi;
+                        end
+                        regl = size(Posi_c,1);
+                        %inertia matrix route
+                        spectra=spectrum_analysis(param, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
+                        %here save spectra in chunks if applicable
+                        abphi(:,:,c) = deformation_ellipse(param, spectra, regl);  % compute cell orientation subimages
+                    end
+                    end
+
+                    %time average - TODO is this th right ellipse quantities
+                    %to avg?
+                    abphi=movmean(abphi, obj.param.time_avg, 4);
+
+                    for t_ind = time_vector(1:obj.param.chunk_size:end) %another chunked process
+                        time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+                        %parfor to process and visualize
+                        param=obj.param; %take a copy of the structs to send to each worker
+                        Posi = obj.Posi;
+                        regl = obj.regl; %intentional, ignore the yellow suggestions
+                        parfor c = time_lims(1):time_lims(2) %parfor
+                            if ~isempty(param.contour)
+                                Posi_c=Posi(:,:,c);
+                            else
+                                Posi_c=Posi;
+                            end
+                            visualization_ellipse(param, abphi, Posi_c, regl, out_folder, c); % create maps of cell orientations
+                        end
+                        obj.save_chunk(abphi, time_lims)    % save results (time-averaged)
+                    end
+
+                    obj.im_regav = struct('a', abphi(1,:,:), 'b', abphi(2,:,:),'phi', abphi(3,:,:));
+                case "radon"
+                    disp("radon method not yet implemented")
+                    exit()
             end
-            %once per experiment
+
+            %once per experiment - make movie
             rR = expReader([obj.param.pathout filesep 'img']);
             rR.ffmpeg_path = obj.param.ffmpeg_path;
             rR.ffmpeg;
         end
 
-        function save_chunk(obj, time_lims)
-            im_regav = obj.im_regav(:, time_lims);
-            save([obj.param.pathout filesep 'cellshapefft_results_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'im_regav', '-v7.3');% save results
+        function save_chunk(obj,chunk, time_lims)
+            save([obj.param.pathout filesep 'cellshapefft_results_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'chunk', '-v7.3');% save results
             if ~isempty(obj.param.contour)  
                 Posi = obj.Posi(time_lims);
                 save([obj.param.pathout filesep 'cellshapefft_results_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'Posi', '-v7.3');

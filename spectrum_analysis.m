@@ -71,7 +71,8 @@ function [abs_im_fft] = fft_adir(im, sigma)
                 [~,ind]=max(abs_im_fft(:));     % finds index of the max
                 sumabs = sum(sum(abs_im_fft));  % computes total value
                 abs_im_fft(ind) = 0;            % puts center to zero
-
-                abs_im_fft = abs_im_fft/sumabs; % normalize the rest of the image
+                
+                %not normalizing, for quality score
+                %abs_im_fft = abs_im_fft/sumabs; % normalize the rest of the image
             end
         end
