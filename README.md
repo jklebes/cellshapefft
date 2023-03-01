@@ -1,4 +1,4 @@
-# myosin-cable-detection
+# cellshapefft
 
 Forked from [mdurade/Coarse-grained-anisotropy-and-size-using-FFT](https://github.com/mdurande/coarse-grained-anisotropy-and-size-using-FFT) , original code 
 as developed and described in the article: 
