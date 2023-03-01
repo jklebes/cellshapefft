@@ -1,9 +1,9 @@
-addpath("..")
+addpath("..") %folder +utilities is expected to be sister directory
 
 param = struct();
-param.pathin = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0699_ACTM1\0003_merging_actin\results\merge0000\';
+param.pathin = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0700_ACTM1\0003_merging_actin\results\merge0000\';
 param.contour = [];%'\\lfs.lifesci.dundee.ac.uk\lfs\cjw\DSLM_expk\expk0245\0011_mask\mask';
-param.pathout = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0699_ACTM1\0004_cellshapefft_actin\';
+param.pathout = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0700_ACTM1\0004_cellshapefft_actin\';
 %param.pathout = ['\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\expk0699\results_actin_', char(datetime('now', Format='dd-MM-yyyy''_''HH-mm-ss'))];
 
 %insert your ffmpeg path here if it's not just command 'ffmpeg'

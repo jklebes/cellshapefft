@@ -28,6 +28,6 @@ for win = 1:regl % for each subimage
     q = quality(win);
     colors(win,:) = c_map(cast(q*255, 'uint8')+1,:);
 end
-RGB = insertShape(I, 'line', line_array, 'LineWidth', 5, 'Color', colors);
+RGB = insertShape(I, 'line', line_array, 'LineWidth', 8, 'Color', colors);
 imwrite(RGB, [out_folder filesep 'img_' num2str(c, '%04d') '.png']);
 end
