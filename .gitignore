@@ -2,6 +2,9 @@
 *.tiff
 *.fig
 *.png
+*.jpeg
+*.jp2
+*.mat
 
 #while in development
 *.mlapp

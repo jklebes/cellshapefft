@@ -10,7 +10,7 @@ function abphi =deformation_ellipse(param, spectra, regl)
 abphi = zeros(3,regl);
 for re = 1:regl     % for each region
     if sum(sum(spectra(:,:,re)))==0 % if the spectrum is empty
-        abphi= [0;0;0];
+        abphi(:,re)= [0;0;0];
 
     else
         [a b phi] = size_def(spectra(:,:,re),param);

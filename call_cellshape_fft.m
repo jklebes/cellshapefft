@@ -37,6 +37,6 @@ param.col='green';
 param.register = []; %to choose whether spectrum data is saved
 param.regsize = []; %??
 
-obj = cellshapefft(param);
+obj = cellshapefft(param,data);
 obj.full_analysis;
 % obj.full_analysis;

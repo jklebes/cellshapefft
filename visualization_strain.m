@@ -18,16 +18,17 @@ for win = 1:regl % for each subimage
     amp = SangS(1,win);    % extract amplitude
     ang = SangS(2,win); % extract angle of deformation
 
-    x1 = xo+cos(ang+pi/2)*amp*param.scale; % define the extremities for the plot of deformation
-    y1 = yo+sin(ang+pi/2)*amp*param.scale;
-    x2 = xo-cos(ang+pi/2)*amp*param.scale;
-    y2 = yo-sin(ang+pi/2)*amp*param.scale;
-
+    x1 = xo-cos(ang+pi/2)*amp*param.scale; % define the extremities for the plot of deformation
+    y1 = yo-sin(ang+pi/2)*amp*param.scale;
+    x2 = xo+cos(ang+pi/2)*amp*param.scale;
+    y2 = yo+sin(ang+pi/2)*amp*param.scale;
+if isfinite([x1 y1 x2 y2])
     line_array(win,:) = [x1 y1 x2 y2];
     % TODO could do outside the loop
     q = quality(win);
     colors(win,:) = c_map(cast(q*255, 'uint8')+1,:);
 end
-RGB = insertShape(I, 'line', line_array, 'LineWidth', 8, 'Color', colors);
+end
+RGB = insertShape(I, 'line', line_array, 'LineWidth', 15, 'Color', colors);
 imwrite(RGB, [out_folder filesep 'img_' num2str(c, '%04d') '.png']);
 end
