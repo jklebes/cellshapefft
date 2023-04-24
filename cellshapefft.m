@@ -13,11 +13,11 @@ classdef cellshapefft < handle
      > Should work as installed from github with sister projects (+utilities).
      > paralellized differently, each worker should run through all steps
      independently.  
-         > Time averaging of spectrums taken out (for now?)
          > Had to undo some of the one-file, one-object structure and make
          function files, for parallelization reasons.
      > removed function variants, in particular made parallel variants the
      only and main variant
+     > added correction for stretched noise, specific to our microscopy setup
     
     Code to analyse the cell deformation on large images with Fourier 
     transform. This code generates maps of cell deformation based on the 
@@ -36,12 +36,14 @@ classdef cellshapefft < handle
     
     Example:
     
+    %TODO check current
+
     param = struct();
     param.pathin = 'C:PATH\TO\IMAGES';
     param.contour = 'C:PATH\TO\MASK';
     param.pathout = 'C:PATH\TO\RESULTS';
     param.siz = [];
-    param.time_points = [];
+    param.timePoints = [];
     param.chunk_size = [];
     param.tleng = [];
     param.timestep = [];
@@ -60,7 +62,6 @@ classdef cellshapefft < handle
     %}
     properties
         param
-        data
         im_regav
         Posi
         regl
@@ -68,25 +69,23 @@ classdef cellshapefft < handle
 
     methods
 
-        function obj = cellshapefft(param, data)
-
-            import utilities.expReader;
+        function obj = cellshapefft(param)
             %If no contour is needed, enter param.contour = [];
             param.reader = expReader(param.pathin);
             param.contour_reader = expReader(param.contour);
 
-            if isempty(param.time_points) % indices of images to analyze
-                param.time_points = param.reader.timePoints;
+            if isempty(param.timePoints) % indices of images to analyze
+                param.timePoints = param.reader.timePoints;
             end
 
-            param.tleng = size(param.time_points,1);
+            param.tleng = size(param.timePoints,1);
             
             if isempty(param.time_avg) %sliding average over how many time points
                 param.time_avg = 1; %equivalent to no averaging
             end
 
             if isempty(param.chunk_size) % indices of images to analyze
-                param.chunk_size = 48;
+                param.chunk_size = 96;
             end
 
             if isempty(param.tile_size)
@@ -117,10 +116,6 @@ classdef cellshapefft < handle
                 param.strel = 4;  % strel value in the smoothing filter
             end
 
-            if isempty(param.stripe_sigma)
-                param.stripe_sigma = [];  % sigma value in the gaussian smoothing kernel
-            end
-
             if isempty(param.sigma)
                 param.sigma = 0.8;  % sigma value in the gaussian smoothing kernel
             end
@@ -145,44 +140,18 @@ classdef cellshapefft < handle
                 param.workers = 4;  % cores for parallel computation
             end
 
-            obj.data=data;
 
             obj.param = param;
             mkdir(obj.param.pathout);
 
             %save a copy of input files
-            try
-                if ispc
-                    system(['copy /b call_cellshape_fft.m ' obj.param.pathout filesep]);
-                    system(['copy /b cellshapefft.m ' obj.param.pathout filesep]);
-                    system(['copy /b spectrum_analysis.m ' obj.param.pathout filesep]);
-                    switch param.method
-                        case "matrix"
-                            system(['copy /b S_angS.m ' obj.param.pathout filesep]);
-                            system(['copy /b inertia_matp_sigma.m ' obj.param.pathout filesep]);
-                        case "ellipse"
-                            system(['copy /b deformation_ellipse.m ' obj.param.pathout filesep]);
-                        case "radon"
-                            system(['copy /b deformation_radon.m ' obj.param.pathout filesep]);
-                    end
-                else %unix
-                    system(['cp ./call_cellshape_fft.m ' obj.param.pathout filesep]);
-                    system(['cp ./cellshapefft.m ' obj.param.pathout filesep]);
-                    system(['cp ./spectrum_analysis.m ' obj.param.pathout filesep]);
-                    switch param.method
-                        case "matrix"
-                            system(['cp ./S_angS.m ' obj.param.pathout filesep]);
-                            system(['cp ./inertia_matp_sigma.m ' obj.param.pathout filesep]);
-                        case "ellipse"
-                            system(['cp ./deformation_ellipse.m ' obj.param.pathout filesep]);
-                        case "radon"
-                            system(['cp ./deformation_radon.m ' obj.param.pathout filesep]);
-                    end
-                end
-            catch
-                %if pathing problems, skip
-                disp(["Problems encountered while attempting to copy code files to" ...
-                    obj.param.pathout ", code was not saved"])
+            copyfile(which('spectrum_analysis'),[obj.param.pathout filesep 'spectrum_analysis_' datestr(datetime,'yymmdd_HHMM') '.m']);
+            if obj.param.method=="matrix"
+                copyfile(which('inertia_matp_sigma'),[obj.param.pathout filesep 'inertia_matp_sigma_' datestr(datetime,'yymmdd_HHMM') '.m']);
+                copyfile(which('S_angS'),[obj.param.pathout filesep 'S_angS_' datestr(datetime,'yymmdd_HHMM') '.m']);
+            elseif obj.param.method=="ellipse"
+                copyfile(which('size_def'),[obj.param.pathout filesep 'size_def_' datestr(datetime,'yymmdd_HHMM') '.m']);
+            
             end
 
             info = imfinfo(obj.param.reader.fileName); % get information about the images
@@ -236,7 +205,6 @@ classdef cellshapefft < handle
             %          for each tile.
             %
             %--------------------------------------------------------------------------
-            import utilities.expReader;
             pool = gcp('nocreate');
             if isempty(pool)
                 parpool(obj.param.workers);
@@ -247,6 +215,7 @@ classdef cellshapefft < handle
                 end
             end
 
+          
             %once per run
             obj.Position();               % register positions of each subimages
             %TODO could make part of parallel loop, esp in case with mask
@@ -263,15 +232,14 @@ classdef cellshapefft < handle
             out_folder = [obj.param.pathout filesep 'img'];
             mkdir(out_folder);
 
-            time_vector = obj.param.time_points;
+            time_vector = obj.param.timePoints;
             quality = zeros([resultsdims]);
-           
             switch obj.param.method
                 case "matrix"
                     %create variables
                     inertia_matrix = zeros([2 2 resultsdims]);
                     SangS = zeros([2 resultsdims]);
-                    write_spectra=true;
+                    write_spectra=false;
 
                     %chunked
                     for t_ind = time_vector(1:obj.param.chunk_size:end)
@@ -281,7 +249,7 @@ classdef cellshapefft < handle
                         end
                         param=obj.param; %take a copy of the structs to send to each worker
                         Posi = obj.Posi; %intentional, ignore the yellow suggestions
-                        data=obj.data;
+                       
                         parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
                             %per timepoint
                             if ~isempty(param.contour)
@@ -291,7 +259,8 @@ classdef cellshapefft < handle
                             end
                             regl = size(Posi_c,1);
                         %inertia matrix route
-                        spectra=spectrum_analysis(param, data(:,:,c), regl, Posi_c, spectsize, c);        % compute spectrums of subimages
+                        data=param.reader.stack(c);
+                        spectra=spectrum_analysis(param, data, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
                         %here save spectra in chunks if applicable
                         if write_spectra
                             spectra_chunk(:,:,:,c)=spectra;
@@ -345,7 +314,7 @@ classdef cellshapefft < handle
 
                         param=obj.param; %take a copy of the structs to send to each worker
                         Posi = obj.Posi; %intentional, ignore the yellow suggestions
-                        data=obj.data;
+                        
                     parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
                         %per timepoint
                         if ~isempty(param.contour)
@@ -355,7 +324,8 @@ classdef cellshapefft < handle
                         end
                         regl = size(Posi_c,1);
                         %inertia matrix route
-                        spectra=spectrum_analysis(param, data(:,:,c), regl, Posi_c, spectsize, c);        % compute spectrums of subimages
+                        data=param.reader.stack(c);
+                        spectra=spectrum_analysis(param, data, regl, Posi_c, spectsize, c);        % compute spectrums of subimages
                         %here save spectra in chunks if applicable
                         [ quality(:, c),abphi(:,:,c)] = deformation_ellipse(param, spectra, regl);  % compute cell orientation subimages
                     end
@@ -393,10 +363,10 @@ classdef cellshapefft < handle
             end
 
             %once per experiment - make movie
-            %TODO broken as of jp2 save?
-            %rR = expReader([obj.param.pathout]);
-            %rR.ffmpeg_path = obj.param.ffmpeg_path;
-            %rR.ffmpeg;
+            %eR = expReader([obj.param.pathout]);
+
+            %eR.ffmpeg_path = obj.param.ffmpeg_path;
+            %eR.ffmpeg;
         end
 
         function save_chunk(obj,chunk,name, time_lims)
@@ -433,7 +403,7 @@ classdef cellshapefft < handle
 
                 obj.regl = zeros(obj.param.tleng,1);
                 for t = 1:obj.param.tleng
-                    b = obj.param.contour_reader.readSpecificImage(obj.param.time_points(t)); % load mask images
+                    b = obj.param.contour_reader.readSpecificImage(obj.param.timePoints(t)); % load mask images
                     b = im2double(b);
 
                     x = 1:overlap:(obj.param.siz(1)- obj.param.tile_size+1);

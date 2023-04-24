@@ -1,9 +1,9 @@
 addpath("..") %folder +utilities is expected to be sister directory
 
 param = struct();
-param.pathin = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0700_ACTM1\0003_merging_actin\results\merge0000\';
+param.pathin = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\Confocal\myosin';
 param.contour = [];%'\\lfs.lifesci.dundee.ac.uk\lfs\cjw\DSLM_expk\expk0245\0011_mask\mask';
-param.pathout = '\\cjw-t640.lifesci.dundee.ac.uk\md3400big\analysis\expk0700_ACTM1\0004_cellshapefft_actin\';
+param.pathout = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\Confocal\';
 %param.pathout = ['\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\expk0699\results_actin_', char(datetime('now', Format='dd-MM-yyyy''_''HH-mm-ss'))];
 
 %insert your ffmpeg path here if it's not just command 'ffmpeg'
@@ -16,7 +16,7 @@ else
 end
 
 param.time_points = [];
-param.time_avg = 4;
+param.time_avg = 1;
 param.method = []; %choose between ellipse-fitting and inertia matrix
                         %analysis (see paper). "ellipse", "matrix", or "radon"
 param.workers = 16;
@@ -26,7 +26,6 @@ param.tile_size = []; %size of tiles.
 param.overlap= [];
 param.cut = []; %masking a circle in the middle of Fourier spectrum
 param.propor = []; 
-param.stripe_sigma=4; %blurring real space image for stripe removal 
 param.sigma = [];
 param.strel = [];
 
@@ -37,6 +36,6 @@ param.col='green';
 param.register = []; %to choose whether spectrum data is saved
 param.regsize = []; %??
 
-obj = cellshapefft(param,data);
+obj = cellshapefft(param);
 obj.full_analysis;
 % obj.full_analysis;

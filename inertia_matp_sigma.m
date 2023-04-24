@@ -11,9 +11,6 @@ for re=1:regl
 al=spectra(:,:,re);
 th_spec = al;
 
-top_bottom=[th_spec(1:round(param.tile_size/16)+1,:);th_spec(end-round(param.tile_size/16):end,:)];
-col_means = mean(top_bottom, 1);
-th_spec =th_spec-col_means;
 
 %% binarization procedure
 ic = ceil(param.tile_size*1/8+1);
@@ -64,7 +61,7 @@ th_spec(filt>0) = 1;                            % get back the pixels in the cen
 B = false(param.tile_size/4);                       % create a logical matrix of falses of size tile_size
 B(th_spec>0)=1;                              % put rights where th_spec = 1
 se=strel('disk',param.strel);                % smooth with a strel
-%th_spec=imclose(B,se);                       % close image
+th_spec=imclose(B,se);                       % close image
 
 %% correlations between the binary points as inertia matrix
 

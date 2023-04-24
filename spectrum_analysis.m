@@ -64,8 +64,7 @@ function [abs_im_fft] = fft_adir(im, sigma)
             % *OUTPUT*: + abs_im_fft the spectrum normalized
             %
             %--------------------------------------------------------------------------
-            import utilities.perdecomp;
-            if(isnan(im)==1)                % if image has NaN
+            if isnan(im)              % if image has NaN
                 abs_im_fft = NaN;
             else
                 [p,~] = perdecomp(im);      % reduce image size effects by periodizing borders
@@ -78,36 +77,10 @@ function [abs_im_fft] = fft_adir(im, sigma)
                     abs_im_fft=imgaussfilt(abs_im_fft, sigma); %blurring of Fourier space image
                 end
                 abs_im_fft(ind) = 0;            % puts center to zero
-                
+                siz=size(abs_im_fft,1);
                 %abs_im_fft = abs_im_fft/sumabs; %normalize by tile area
+                top_bottom=[abs_im_fft(1:round(siz/8)+1,:);abs_im_fft(end-round(siz/8):end,:)];
+                col_means = mean(top_bottom, 1);
+                abs_im_fft =abs_im_fft-col_means;
             end
-end
-
-
-
-function ratio = signalToNoise(im_real, min_cellsize)
-% abs_im_fft = fft_adir(im)
-% function that computes the FT of an image
-
-%--------------------------------------------------------------------------
-%
-% *INPUT*: + im the image on which to perform the fourier transform
-%
-% *OUTPUT*: + abs_im_fft the spectrum normalized
-%
-%--------------------------------------------------------------------------
-import utilities.perdecomp;
-                [p,~] = perdecomp(im_real);      % reduce image size effects by periodizing borders
-                im_fft = fftn(p);               % 2D fast fourier transform
-                im_fft_shift = fftshift(im_fft);% shifts the FT for representation purpose
-                im = abs(im_fft_shift); % takes the module
-dims=size(im);
-[x,y] = ndgrid(1:dims(1),1:dims(2));
-centerx=dims(1)/2;
-centery=dims(2)/2;
-circle_mask=(x-centerx).^2+(y-centery).^2<(dims(1)/min_cellsize)^2;
-%im=log(im);
-signal =sum(im(circle_mask),'all')/sum(circle_mask,'all');
-noise =sum(im(~circle_mask),'all')/sum(~circle_mask,'all');
-ratio=signal/noise;
 end
