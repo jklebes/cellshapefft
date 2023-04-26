@@ -22,7 +22,7 @@ param.method = []; %choose between ellipse-fitting and inertia matrix
 param.workers = 16;
 param.chunk_size = 48; %ideally multiple of number of workers
 
-param.tile_size = []; %size of tiles.
+param.tileSize = []; %size of tiles.
 param.overlap= [];
 param.cut = []; %masking a circle in the middle of Fourier spectrum
 param.propor = []; 

@@ -1,20 +1,18 @@
-function [quality,Ms] = inertia_matp_sigma(param, spectra, regl)
+function [quality,Ms] = inertia_matp_sigma(param, spectra, nTiles)
 % M = inertia_matp_sigma(al,obj.param)
 % function that computes the inertia matrix based on a spectrum averaged
 % smoothed with a gaussian filter and with a percentile of points to keep.
 %
 % *OUTPUT*: + M the inertia matrix
 %--------------------------------------------------------------------------
-Ms = zeros(2,2,regl);
-quality=zeros([1 regl]);
-for re=1:regl
-al=spectra(:,:,re);
-th_spec = al;
-
+Ms = zeros(2,2,nTiles);
+quality=zeros([1 nTiles]);
+for re=1:nTiles
+th_spec=spectra(:,:,re);
 
 %% binarization procedure
-ic = ceil(param.tile_size*1/8+1);
-jc = ceil(param.tile_size*1/8+1);      % position of the center 
+ic = ceil(param.tileSize*1/8+1);
+jc = ceil(param.tileSize*1/8+1);      % position of the center 
             % x/2+1 in case of even dimensions seems to be where center of 
                            %of spectrum after fftshift is!  x/2 ->
                            %non-centered spectrum -> diagonal orientation
@@ -23,17 +21,17 @@ jc = ceil(param.tile_size*1/8+1);      % position of the center
 % get rid of the pixels in the center in a radius
 % of obj.param.cut
 % because the proportion was defined this way
-[I,J] = ndgrid(1:param.tile_size/4,1:param.tile_size/4);
+[I,J] = ndgrid(1:param.tileSize/4,1:param.tileSize/4);
 filt = double((I-ic).^2+(J-jc).^2<=(param.cut)^2);
 th_spec(filt>0) = 0;
 
 
-reshaped = reshape(th_spec,[param.tile_size*param.tile_size*1/16 ,1]);  % reshape the spectrum
-[values,index]= sort(reshaped,'descend');         % sort in intensity and keep indexes
-nbel = param.propor * param.tile_size*param.tile_size*1/16;         % nbel number of points determined by obj.param.propor
+reshaped = reshape(th_spec,[param.tileSize*param.tileSize*1/16 ,1]);  % reshape the spectrum
+[~,index]= sort(reshaped,'descend');                            % sort in intensity and keep indexes
+nbel = param.propor * param.tileSize*param.tileSize*1/16;         % nbel number of points determined by obj.param.propor
 
-if nbel > param.tile_size*param.tile_size/16             % if nbel is to large, take the whole picture
-    nbel = param.tile_size*param.tile_size/16;
+if nbel > param.tileSize*param.tileSize/16             % if nbel is to large, take the whole picture
+    nbel = param.tileSize*param.tileSize/16;
 end
 keep = index(1:floor(nbel)); %indices of top propor% birghtest pixels
 nbel = size(keep);
@@ -58,7 +56,7 @@ th_spec(filt>0) = 1;                            % get back the pixels in the cen
 % radius of param.cut
 
 %% morphological closing
-B = false(param.tile_size/4);                       % create a logical matrix of falses of size tile_size
+B = false(param.tileSize/4);                % create a logical matrix of falses of size tileSize
 B(th_spec>0)=1;                              % put rights where th_spec = 1
 se=strel('disk',param.strel);                % smooth with a strel
 th_spec=imclose(B,se);                       % close image
@@ -66,7 +64,7 @@ th_spec=imclose(B,se);                       % close image
 %% correlations between the binary points as inertia matrix
 
 norm = sum(sum((th_spec).^2));               % computes norm
-[Yg,Xg]=meshgrid(1:(param.tile_size/4),1:(param.tile_size/4)); % create meshgrid of correct size
+[Yg,Xg]=meshgrid(1:(param.tileSize/4),1:(param.tileSize/4)); % create meshgrid of correct size
 
 Xo = Xg-ic;
 Yo = Yg-jc;

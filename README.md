@@ -70,7 +70,7 @@ To run the code:
     param.chunk_size = [];
     param.tleng = [];
     param.timestep = [];
-    param.tile_size = [];
+    param.tileSize = [];
     param.fres = [];
     param.cut = [];
     param.propor = [];
@@ -94,5 +94,5 @@ To run the code:
 * ``Param.mat``, saving input parameters
 * ``Results.mat``, saving results
 
-``Results.mat`` contains a structure ``Results``, values ``regl`` (number of subimages), ``Posi`` (positions of subimages), ``numX`` and ``numY`` (dimensions of subimages array), ``ci`` (time average window?).  Main results are in ``Results.im_regav`` structure in the form of arrays ``M``, ``S``, ``angS``, ``a``, ``b``, ``phi``.
+``Results.mat`` contains a structure ``Results``, values ``nTiles`` (number of subimages), ``tileCoords`` (positions of subimages), ``numX`` and ``numY`` (dimensions of subimages array), ``ci`` (time average window?).  Main results are in ``Results.im_regav`` structure in the form of arrays ``M``, ``S``, ``angS``, ``a``, ``b``, ``phi``.
 * ``a``, ``b``, ``phi`` : (real space) ellipse major axis, minor axis, and angle.

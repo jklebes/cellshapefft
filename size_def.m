@@ -13,8 +13,8 @@ function [a,b,phi]= size_def(abs_im_fft_w, param)
 
 [yu,xu] = localMaximum_h(abs_im_fft_w,2,0,40);
 [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);
-a = floor(param.tile_size/2)*1/ai;
-b =floor(param.tile_size/2)*1/bi;
+a = floor(param.tileSize/2)*1/ai;
+b =floor(param.tileSize/2)*1/bi;
 end
 
 function [varargout]=ellipsefit(x,y)

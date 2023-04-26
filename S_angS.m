@@ -1,4 +1,4 @@
-function SangS = S_angS(Ms, regl)
+function SangS = S_angS(Ms, nTiles)
 % [S,angS] = S_angS(spectrum)
 % This function defines the angle and amplitude of cell deformation
 % from inertia matrix
@@ -13,8 +13,8 @@ function SangS = S_angS(Ms, regl)
 %           matrix
 %
 %--------------------------------------------------------------------------
-SangS=zeros(2,regl);
-for re=1:regl
+SangS=zeros(2,nTiles);
+for re=1:nTiles
     M=Ms(:,:,re);
     [~,E] = eig(M);                % extract the eigenvalues of the inertia matrix
     L1 = 2*sqrt(E(2,2)/2);         % definition of the minor and major axis of the inertia ellipse

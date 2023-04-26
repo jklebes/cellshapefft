@@ -1,4 +1,4 @@
-function abphi =deformation_ellipse(param, spectra, regl)
+function abphi =deformation_ellipse(param, spectra, nTiles)
 % results = def size_analysis(obj.param,results)
 % Function that computes the ellipse for the siz representation
 % on each averaged subimage,  fills the im_regav structure with the fields
@@ -7,8 +7,8 @@ function abphi =deformation_ellipse(param, spectra, regl)
 % *OUTPUT*:+ results
 %--------------------------------------------------------------------------
 
-abphi = zeros(3,regl);
-for re = 1:regl     % for each region
+abphi = zeros(3,nTiles);
+for re = 1:nTiles     % for each region
     if sum(sum(spectra(:,:,re)))==0 % if the spectrum is empty
         abphi(:,re)= [0;0;0];
 
@@ -40,8 +40,8 @@ function [a,b,phi]= size_def(abs_im_fft_w, param)
 
 [yu,xu] = localMaximum_h(abs_im_fft_w,2,0,40);
 [~,~,ai,bi,phi,~]=ellipsefit(xu,yu);
-a = floor(param.tile_size/2)*1/ai;
-b =floor(param.tile_size/2)*1/bi;
+a = floor(param.tileSize/2)*1/ai;
+b =floor(param.tileSize/2)*1/bi;
 end
 
 function [varargout]=ellipsefit(x,y)
