@@ -68,7 +68,7 @@ To run the code:
     param.siz = [];
     param.time_points = [];
     param.chunk_size = [];
-    param.tleng = [];
+    param.nTime = [];
     param.timestep = [];
     param.tileSize = [];
     param.fres = [];

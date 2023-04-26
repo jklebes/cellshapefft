@@ -10,7 +10,7 @@ classdef cellshapefft < handle
 
     Modifications Jason Klebes (2022)
      > splitting off some functions (periodicDecomposition) for re-use.
-     > Should work as installed from github with sister projects (+utilities).
+     > Should work as installed from github with sister projects (utilities).
      > paralellized differently, each worker should run through all steps
      independently.  
          > Had to undo some of the one-file, one-object structure and make
@@ -18,6 +18,8 @@ classdef cellshapefft < handle
      > removed function variants, in particular made parallel variants the
      only and main variant
      > added correction for stretched noise, specific to our microscopy setup
+     > tile "quality" score, color coding outputs by
+     >
     
     Code to analyse the cell deformation on large images with Fourier 
     transform. This code generates maps of cell deformation based on the 
@@ -45,7 +47,7 @@ classdef cellshapefft < handle
     param.siz = [];
     param.timePoints = [];
     param.chunk_size = [];
-    param.tleng = [];
+    param.nTime = [];
     param.timestep = [];
     param.tileSize = [];
     param.cut = [];
@@ -53,8 +55,6 @@ classdef cellshapefft < handle
     param.sigma = [];
     param.scale = [];
     param.strel = [];
-    param.register = [];
-    param.regsize = [];
     param.workers = [];
 
     obj = cellshapefft(param);
@@ -62,7 +62,6 @@ classdef cellshapefft < handle
     %}
     properties
         param
-        im_regav
         tileCoords
         nTiles
     end
@@ -74,17 +73,21 @@ classdef cellshapefft < handle
             param.reader = expReader(param.pathin);
             param.contour_reader = expReader(param.contour);
 
+             %TODO this could be an argparser
+
             if isempty(param.timePoints) % indices of images to analyze
                 param.timePoints = param.reader.timePoints;
             end
 
-            param.tleng = size(param.timePoints,1);
+            param.nTime = length(param.timePoints);
             
+         
+
             if isempty(param.time_avg) %sliding average over how many time points
                 param.time_avg = 1; %equivalent to no averaging
             end
 
-            if isempty(param.chunk_size) % indices of images to analyze
+            if isempty(param.chunk_size) %interval to save
                 param.chunk_size = 96;
             end
 
@@ -92,7 +95,7 @@ classdef cellshapefft < handle
                 param.tileSize = 128; % size of subimages
             end
 
-            if isempty(param.overlap) % indices of images to analyze
+            if isempty(param.overlap)
                 param.overlap = 0.5;
             end
 
@@ -120,12 +123,8 @@ classdef cellshapefft < handle
                 param.sigma = 0.8;  % sigma value in the gaussian smoothing kernel
             end
 
-            if isempty(param.register)
-                param.register = 0;  %
-            end
-
-            if isempty(param.regsize)
-                param.regsize = 0;  %
+            if isempty(param.writeSpectra)
+                param.writeSpectra = false;  %
             end
 
             if isempty(param.method)
@@ -156,9 +155,7 @@ classdef cellshapefft < handle
 
             info = imfinfo(obj.param.reader.fileName); % get information about the images
             obj.param.siz=[info.Width info.Height];        % extract size of the images
-            %obj.results = struct('nTiles',[],'tileCoords',[],'im_regav',[],'ci',[]); % result structure
             obj.tileCoords=[];
-            obj.im_regav =[];
         end
 
         function full_analysis(obj)
@@ -177,7 +174,7 @@ classdef cellshapefft < handle
             % *INPUT*: + obj.param for the analysis in Fourier transform, obj.param is a structure
             %        initialized in FullGUI_analysis_chicken.m and that contains fields
             %        for 'siz': the size of the image in pixels
-            %        'tleng': the number of images to treat
+            %        'nTime': the number of images to treat
             %        'pathin': the path to the folder containing the folder with the
             %        images
             %        'pathout': path to the folder that will contain the results
@@ -185,7 +182,7 @@ classdef cellshapefft < handle
             %        'fres': name of the folder with the results images
             %        'timestep': number of images to perform the average on
             %        'tileSize': the size of the subimages
-            %        'sigma': sigma value in the gaussian soothing kernel
+            %        'sigma': sigma value in the gaussian smoothing kernel
             %        'cut': size of the cut around the center of the Fourier spectrum
             %        'proportion': value of the percentile of points to keep
             %        'strel': strel value in the soothing filter
@@ -222,11 +219,11 @@ classdef cellshapefft < handle
 
             spectsize=ceil(obj.param.tileSize/4);
             %obj.im_regav = repmat(struct(repmat(struct('S',[]...
-            %    ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.nTiles),1)),1,obj.param.tleng);
+            %    ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.nTiles),1)),1,obj.param.nTime);
             % Initialization of the structure im_regav, containing spectrums
             % cell deformations and sizes for each averaged subimage
             %instead 2 or 3 arrays to hold results
-            resultsdims = [max(obj.nTiles), obj.param.tleng];
+            resultsdims = [max(obj.nTiles), obj.param.nTime];
 
             %from affich - prepare diretory to save images in
             out_folder = [obj.param.pathout filesep 'img'];
@@ -239,42 +236,40 @@ classdef cellshapefft < handle
                     %create variables
                     inertia_matrix = zeros([2 2 resultsdims]);
                     SangS = zeros([2 resultsdims]);
-                    write_spectra=false;
-
                     %chunked
                     for t_ind = time_vector(1:obj.param.chunk_size:end)
                         time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
-                        if write_spectra
+                        if param.writeSpectra
                             spectra_chunk=zeros([spectsize, spectsize, resultsdims(1), obj.param.chunk_size]);
                         end
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords; %intentional, ignore the yellow suggestions
-                       
+
                         parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
                             %per timepoint
                             if ~isempty(param.contour)
-                                Posi_c=tileCoords(:,:,c);
+                                tileCoords_c=tileCoords(:,:,c);
                             else
-                                Posi_c=tileCoords;
+                                tileCoords_c=tileCoords;
                             end
-                            nTiles = size(Posi_c,1);
-                        %inertia matrix route
-                        data=param.reader.stack(c);
-                        spectra=spectrum_analysis(param, data, nTiles, Posi_c, spectsize, c);        % compute spectrums of subimages
-                        %here save spectra in chunks if applicable
-                        if write_spectra
-                            spectra_chunk(:,:,:,c)=spectra;
+                            nTiles = size(tileCoords_c,1);
+                            %inertia matrix route
+                            data=param.reader.stack(c);
+                            spectra=spectrum_analysis(param, data, nTiles, tileCoords_c, spectsize, c);        % compute spectrums of subimages
+                            %here save spectra in chunks if applicable
+                            if param.writeSpectra
+                                spectra_chunk(:,:,:,c)=spectra;
+                            end
+                            [ quality(:, c),inertia_matrix(:,:,:,c)]= inertia_matp_sigma(param, spectra, nTiles);  % compute cell orientation subimages
+                        end %first parfor
+                        if param.writeSpectra
+                            save([obj.param.pathout filesep 'spectra_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'spectra_chunk', '-v7.3');
                         end
-                        [ quality(:, c),inertia_matrix(:,:,:,c)]= inertia_matp_sigma(param, spectra, nTiles);  % compute cell orientation subimages
-                    end %first parfor
-                    if write_spectra
-                        save([obj.param.pathout filesep 'spectra_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'spectra_chunk', '-v7.3');
-                    end
                     end
                     %time average
                     inertia_matrix=movmean(inertia_matrix, obj.param.time_avg, 4);
                     quality=movmean(quality, obj.param.time_avg, 2);
-                    
+
                     %transform quality scores to range 0 to 1 for
                     %visualization
                     quality_rescaled=rescale(quality);
@@ -285,27 +280,24 @@ classdef cellshapefft < handle
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords;
                         nTiles = obj.nTiles; %intentional, ignore the yellow suggestions
-                       
+
                         parfor c = time_lims(1):time_lims(2) %parfor
                             if ~isempty(param.contour)
-                                Posi_c=tileCoords(:,:,c);
+                                tileCoords_c=tileCoords(:,:,c);
                             else
-                                Posi_c=tileCoords;
+                                tileCoords_c=tileCoords;
                             end
                             SangS_c = S_angS(inertia_matrix(:,:,:,c), nTiles);
-                            visualization_strain(param, SangS_c, quality_rescaled(:, c), Posi_c, nTiles, out_folder, c); % create maps of cell orientations
+                            visualization_strain(param, SangS_c, quality_rescaled(:, c), tileCoords_c, nTiles, out_folder, c); % create maps of cell orientations
                             SangS(:,:,c) = SangS_c;
                         end
                         obj.save_chunk(inertia_matrix(:,:,:,time_lims(1):time_lims(2)), 'inertia_matrix', time_lims)    % save results (time-averaged)
-                        obj.save_chunk(SangS(:,:,time_lims(1):time_lims(2)),'SangS', time_lims) 
-                        obj.save_chunk(quality(:,time_lims(1):time_lims(2)),'quality', time_lims) 
+                        obj.save_chunk(SangS(:,:,time_lims(1):time_lims(2)),'SangS', time_lims)
+                        obj.save_chunk(quality(:,time_lims(1):time_lims(2)),'quality', time_lims)
                     end
-                    
-                    obj.im_regav = struct('S', SangS(1,:,:), 'angS', SangS(2,:,:));
-                    
+
                 case "ellipse"
                     abphi = zeros([3 resultsdims]); %create variables
-                    SangS = zeros([2 resultsdims]);
 
                     %parfor and save chunks
                     %chunk
@@ -314,28 +306,28 @@ classdef cellshapefft < handle
 
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords; %intentional, ignore the yellow suggestions
-                        
-                    parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
-                        %per timepoint
-                        if ~isempty(param.contour)
-                            Posi_c=tileCoords(:,:,c);
-                        else
-                            Posi_c=tileCoords;
+
+                        parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
+                            %per timepoint
+                            if ~isempty(param.contour)
+                                tileCoords_c=tileCoords(:,:,c);
+                            else
+                                tileCoords_c=tileCoords;
+                            end
+                            nTiles = size(tileCoords_c,1);
+                            %inertia matrix route
+                            data=param.reader.stack(c);
+                            spectra=spectrum_analysis(param, data, nTiles, tileCoords_c, spectsize, c);        % compute spectrums of subimages
+                            %here save spectra in chunks if applicable
+                            [ quality(:, c),abphi(:,:,c)] = deformation_ellipse(param, spectra, nTiles);  % compute cell orientation subimages
                         end
-                        nTiles = size(Posi_c,1);
-                        %inertia matrix route
-                        data=param.reader.stack(c);
-                        spectra=spectrum_analysis(param, data, nTiles, Posi_c, spectsize, c);        % compute spectrums of subimages
-                        %here save spectra in chunks if applicable
-                        [ quality(:, c),abphi(:,:,c)] = deformation_ellipse(param, spectra, nTiles);  % compute cell orientation subimages
-                    end
                     end
 
                     %time average - TODO is this th right ellipse quantities
                     %to avg?
                     abphi=movmean(abphi, obj.param.time_avg, 4);
                     quality=movmean(quality, obj.param.time_avg, 2);
-                    
+
                     %transform quality scores to range 0 to 1 for
                     %visualization
                     quality=rescale(quality);
@@ -347,16 +339,14 @@ classdef cellshapefft < handle
                         nTiles = obj.nTiles; %intentional, ignore the yellow suggestions
                         parfor c = time_lims(1):time_lims(2) %parfor
                             if ~isempty(param.contour)
-                                Posi_c=tileCoords(:,:,c);
+                                tileCoords_c=tileCoords(:,:,c);
                             else
-                                Posi_c=tileCoords;
+                                tileCoords_c=tileCoords;
                             end
-                            visualization_ellipse(param, abphi, quality(:,c), Posi_c, nTiles, out_folder, c); % create maps of cell orientations
+                            visualization_ellipse(param, abphi, quality(:,c), tileCoords_c, nTiles, out_folder, c); % create maps of cell orientations
                         end
                         obj.save_chunk(abphi, time_lims)    % save results (time-averaged)
                     end
-
-                    obj.im_regav = struct('a', abphi(1,:,:), 'b', abphi(2,:,:),'phi', abphi(3,:,:));
                 case "radon"
                     disp("radon method not yet implemented")
                     exit()
@@ -371,7 +361,7 @@ classdef cellshapefft < handle
 
         function save_chunk(obj,chunk,name, time_lims)
             save([obj.param.pathout filesep 'cellshapefft_results_'  name '_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'chunk', '-v7.3');% save results
-            if ~isempty(obj.param.contour)  
+            if ~isempty(obj.param.contour)
                 tileCoords = obj.tileCoords(time_lims);
                 save([obj.param.pathout filesep 'cellshapefft_results_' name '_'  num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'tileCoords', '-v7.3');
             end
@@ -385,24 +375,24 @@ classdef cellshapefft < handle
             % of the Result structure are filled.
             disp('Registering...');
 
-            overlap = floor((1-obj.param.overlap)*obj.param.tileSize);                      % number of shared pixels between
+            overlap = floor((1-obj.param.overlap)*obj.param.tileSize); % number of shared pixels between
             % subimages
 
             if isempty(obj.param.contour)                  % if no mask is required
-                    x = 1:overlap:(obj.param.siz(1)- obj.param.tileSize+1);
-                    y = 1:overlap:(obj.param.siz(2)- obj.param.tileSize+1);
-                    [X,Y] = meshgrid(x,y);
-                    positions = [X(:) Y(:)];
-                    obj.nTiles=size(positions,1) ;
-                    obj.tileCoords(1:obj.nTiles,:) =  [X(:) Y(:)];
-             % register number of subimages at each time
+                x = 1:overlap:(obj.param.siz(1)- obj.param.tileSize+1);
+                y = 1:overlap:(obj.param.siz(2)- obj.param.tileSize+1);
+                [X,Y] = meshgrid(x,y);
+                positions = [X(:) Y(:)];
+                obj.nTiles=size(positions,1) ;
+                obj.tileCoords(1:obj.nTiles,:) =  [X(:) Y(:)];
+                % register number of subimages at each time
                 %only one value - should be same number of subimages each
                 %timepoint
 
             else                                        % when a mask is required
 
-                obj.nTiles = zeros(obj.param.tleng,1);
-                for t = 1:obj.param.tleng
+                obj.nTiles = zeros(obj.param.nTime,1);
+                for t = 1:obj.param.nTime
                     b = obj.param.contour_reader.readSpecificImage(obj.param.timePoints(t)); % load mask images
                     b = im2double(b);
 

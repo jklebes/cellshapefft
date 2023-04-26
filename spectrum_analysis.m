@@ -60,23 +60,26 @@ function [abs_im_fft] = fftTile(im, sigma)
             %
             % *INPUT*: + im the image on which to perform the fourier transform
             %
-            % *OUTPUT*: + abs_im_fft the spectrum normalized
+            % *OUTPUT*: + abs_im_fft the spectrum of periodic component
+            %           (see periodicDecomposition), blurred and normalized
             %
             %--------------------------------------------------------------------------
             if isnan(im)              % if image has NaN
                 abs_im_fft = NaN;
             else
                 [p,~] = periodicDecomposition(im); % reduce image size effects by periodizing borders
-                im_fft = fftn(p);               % 2D fast fourier transform
-                im_fft_shift = fftshift(im_fft);% shifts the FT for representation purpose
-                abs_im_fft = abs(im_fft_shift); % takes the modulus
+                abs_im_fft = abs(fftshift(fftn(p))); % takes the modulus
                 [~,ind]=max(abs_im_fft(:));     % finds index of the max = center
-                %sumabs = sum(sum(abs_im_fft));  % computes total value
+                
                 if ~isempty(sigma)
                     abs_im_fft=imgaussfilt(abs_im_fft, sigma); %blurring of Fourier space image
                 end
                 abs_im_fft(ind) = 0;            % puts center to zero
                 siz=size(abs_im_fft,1);
+                
+                abs_im_fft = abs_im_fft/numel(im); %normalize by tile area to make
+                %fft spectrum values indicative of tile avg intensity,
+                %independent of tile size
 
                 %% the profile-subtracting correction!
                 %need a tile-size-independent way to figure out where to
@@ -86,6 +89,7 @@ function [abs_im_fft] = fftTile(im, sigma)
                 col_means = mean(top_bottom, 1);
                 abs_im_fft =abs_im_fft-col_means;
 
-                %abs_im_fft = abs_im_fft/sumabs; %normalize by tile area ?
+                
+
             end
 end

@@ -1,4 +1,8 @@
-addpath("..") %folder +utilities is expected to be sister directory
+addpath(genpath("..")); %folder utilities is expected to be sister directory
+
+%standalong script to run cellshapefft on a directory of files.
+%In general in our experiment, use call_analysis_pipeline.m instead to
+% create an analysis_object rA and call its cellshapeft function
 
 param = struct();
 param.pathin = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\Confocal\myosin';
@@ -18,9 +22,9 @@ end
 param.time_points = [];
 param.time_avg = 1;
 param.method = []; %choose between ellipse-fitting and inertia matrix
-                        %analysis (see paper). "ellipse", "matrix", or "radon"
+                   %analysis (see paper). "ellipse", "matrix", or "radon"
 param.workers = 16;
-param.chunk_size = 48; %ideally multiple of number of workers
+param.chunk_size = 96; %ideally multiple of number of workers
 
 param.tileSize = []; %size of tiles.
 param.overlap= [];
@@ -33,8 +37,7 @@ param.strel = [];
 param.scale = 300;
 param.col='green';
 
-param.register = []; %to choose whether spectrum data is saved
-param.regsize = []; %??
+param.writeSpectra = []; %to choose whether spectrum data is saved
 
 obj = cellshapefft(param);
 obj.full_analysis;
