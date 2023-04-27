@@ -36,8 +36,7 @@ Further modification by Guillermo Serrano Najera (2019)
 Modifications Jason Klebes (2022)
 * Developments specific to our DSLM experiments: attempts to suppress scan stripe noise, which biases the anisotropy calculation.
 * splitting off some functions (perdecomp) for re-use.
-* Should work as installed from github with sister projects (+utilities).
-* notebooks, new GUI app for calibrating
+* Should work as installed from github with sister projects (utilities).
 
 ## Getting Started
 
@@ -50,9 +49,9 @@ Images should be either .png or .tiff .tif (stacks are okay)
 
 ### Installing
 * Install matlab 
-* Download package ``+utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
+* Download package ``utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
 * Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If locally installed and not on path, the full ffmpeg_path can be input manually.
-* Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``perdecomp.m`` is contained in the +utilities package, another copy is shipped here.
+* Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``periodicDecomposition.m`` is contained in the utilities package, another copy is shipped here.
 
 ### How to use it in practice
 To run the code:
