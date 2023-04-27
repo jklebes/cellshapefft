@@ -34,9 +34,9 @@ Further modification by Guillermo Serrano Najera (2019)
 * Array multiplication (.*) for masking (much faster than original)
 
 Modifications Jason Klebes (2022)
-* Developments specific to our DSLM experiments: attempts to suppress scan stripe noise, which biases the anisotropy calculation.
-* splitting off some functions (perdecomp) for re-use.
-* Should work as installed from github with sister projects (utilities).
+* Developments specific to our DSLM experiments: option to supress a particular stretched Gaussian noise background, which biases the anisotropy calculation.
+* integrating our expReader, should work as installed from github with sister projects (utilities).
+* renamed confusing variables
 
 ## Getting Started
 
@@ -55,43 +55,47 @@ Images should be either .png or .tiff .tif (stacks are okay)
 
 ### How to use it in practice
 To run the code:
-* The file to execute is ``call_cellshape_fft.m``.  Inside this file, we create the ``param`` struct holding all user input paramteres and an object ``cellshapefft``. We then run the analysis by calling method "full_analysis" or "full_analysis_chunks".  Or the user can otherwise build a ``param`` struct, create a  ``cellshapefft``  object, and call the ``cellshapefft.full_analysis`` method.
+* The file to execute is ``call_cellshape_fft.m``.  Inside this file, we create the ``param`` struct holding all user input paramteres and an object ``cellshapefft``. If empty, default values, which can be seen in ``cellshapefft.m``, will be used. We then initialize a ``cellshapefft`` object and run the analysis by calling method "full_analysis".
         
 ```
     Example:
     
     param = struct();
-    param.pathin = 'C:PATH\TO\IMAGES';
-    param.contour = 'C:PATH\TO\MASK';
-    param.pathout = 'C:PATH\TO\RESULTS';
-    param.siz = [];
-    param.time_points = [];
-    param.chunk_size = [];
-    param.nTime = [];
-    param.timestep = [];
-    param.tileSize = [];
-    param.fres = [];
-    param.cut = [];
-    param.propor = [];
-    param.sigma = [];
-    param.scale = [];
-    param.strel = [];
-    param.register = [];
-    param.regsize = [];
-    param.workers = [];
+    
+    param.pathin = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\cable detection\exp0186\focused_one';
+    param.pathout = ['\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\cable detection\exp0186\results_actin_', ...
+    char(datetime('now', Format='dd-MM-yyyy''_''HH-mm-ss'))];
 
+    param.ffmpeg_path = [];
+    param.timePoints = [1:48];
+    param.time_avg = 1;
+    param.method = 'matrix'; %choose between ellipse-fitting and inertia matrix
+    param.workers = 16;
+    param.chunk_size = 96; %ideally multiple of number of workers
+    param.tileSize = 100; %size of tiles.
+    param.overlap= 0.5;
+    param.cut = 5; %masking a circle in the middle of Fourier spectrum
+    param.propor = 0.02; 
+    param.sigma = 0.8;
+    param.strel = 4;
+    
+    %scale, color of lines to draw in visualization:
+    param.scale = [];
+    param.col='green'; 
+
+    param.writeSpectra = []; %to choose whether spectrum data is saved
+    param.stretchedNoise = []; %correction particular to interpolated DSLM data
+    
     obj = cellshapefft(param);
-    obj.full_analysis_chunks;
+    obj.full_analysis();
 
 ```
 
 ## Outputs
-
-* a ``results_TIMESTAMP`` director is created in the output path
-* TIF stacks of images ``Deformation_map...`` and ``Deformation_map_onim...``
-* A snapshot of the GUI if used
-* ``Param.mat``, saving input parameters
-* ``Results.mat``, saving results
-
-``Results.mat`` contains a structure ``Results``, values ``nTiles`` (number of subimages), ``tileCoords`` (positions of subimages), ``numX`` and ``numY`` (dimensions of subimages array), ``ci`` (time average window?).  Main results are in ``Results.im_regav`` structure in the form of arrays ``M``, ``S``, ``angS``, ``a``, ``b``, ``phi``.
-* ``a``, ``b``, ``phi`` : (real space) ellipse major axis, minor axis, and angle.
+In the given output director:
+* TIF stacks of images 
+* A copy of the code
+* data files such as ``cellshapefft_results_SangS_<t1>_<t2>.mat``, containing the objects ``M``, ``S`` and ``angS`` ("matrix" route) or ``a``,``b``, and ``phi`` (ellipse route) in arrays of shape [N , nTiles, chunk_size] for the ``chunk_size`` timepoints in a chunk.  Where N = [2,2] for inertia matrix, 2 for fields (S, angS) and 3 for fields (a,b,phi)
+    * ``M`` inertia matrix.
+    * ``S``, ``angS`` cell strain deviator amplitude ( 1/2*(log(L1/L2)) in paper) , and angle.
+    * ``a``, ``b``, ``phi`` : (real space) ellipse major axis, minor axis, and angle.
