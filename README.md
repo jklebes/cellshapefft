@@ -1,5 +1,10 @@
 # cellshapefft
 
+
+Development ended here, merged into cjwlab/DSLMDataAnalysis project as directory ``cellshapefft/``
+
+-------
+
 Forked from [mdurade/Coarse-grained-anisotropy-and-size-using-FFT](https://github.com/mdurande/coarse-grained-anisotropy-and-size-using-FFT) , original code 
 as developed and described in the article: 
     [Fast determination of cell anisotropy and size in epithelial tissue images using Fourier Transform](https://doi.org/10.1103/physreve.99.062401)
@@ -33,7 +38,7 @@ Further modification by Guillermo Serrano Najera (2019)
 * Parallelization def_analysis and plotting
 * Array multiplication (.*) for masking (much faster than original)
 
-Modifications Jason Klebes (2022)
+Modifications Jason Klebes (2023)
 * Developments specific to our DSLM experiments: option to supress a particular stretched Gaussian noise background, which biases the anisotropy calculation.
 * integrating our expReader, should work as installed from github with sister projects (utilities).
 * renamed confusing variables
