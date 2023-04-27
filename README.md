@@ -37,6 +37,7 @@ Modifications Jason Klebes (2022)
 * Developments specific to our DSLM experiments: option to supress a particular stretched Gaussian noise background, which biases the anisotropy calculation.
 * integrating our expReader, should work as installed from github with sister projects (utilities).
 * renamed confusing variables
+* color-coding outputs by "quality" (avg Fourier space intensity)
 
 ## Getting Started
 
@@ -44,13 +45,15 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You will need a version of matlab older than 2015. (Because MATLAB's GUI designer GUIDE was ended in 2015.  With newer MATLAB the app still runs as usual, but the GUI is not edittable in the same way - jk)
-Images should be either .png or .tiff .tif (stacks are okay) 
+A directory of images of cells over time.
+Images cen be .png , .tiff .tif , .jpg .jpeg, .jp2.
+Because of expReader, there should be at least five images with numbered names in the same format, 
+for example "img_0001.png", "img_0002.png", ... .
 
 ### Installing
 * Install matlab 
 * Download package ``utilities`` containing class ``expReader`` and make sure it's on the MATLABPATH, or otherwise have an ``expReader`` file on path.
-* Make sure ffmpeg is installed and on path (comes up with terminal command ``ffmpeg``), if not install a copy of ffmpeg.  If locally installed and not on path, the full ffmpeg_path can be input manually.
+* Make sure ffmpeg is installed and on path (comes up with system command ``ffmpeg``), if not install a copy of ffmpeg.  If locally installed and not on path, the full ffmpeg_path can be input manually.
 * Download this repository.  This repository contains script ``call_cellshape_fft.m``, class ``cellshapefft``, and function collections ``spectrum_analysis.m``, ``deformation_ellipse.m``, ``deformation_matrix.m``, ``visualization_ellipse.m``, ``visualization_strain.m``.  Function ``periodicDecomposition.m`` is contained in the utilities package, another copy is shipped here.
 
 ### How to use it in practice

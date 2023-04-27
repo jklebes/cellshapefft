@@ -36,7 +36,7 @@ param.scale = [];
 param.col='green'; 
 
 param.writeSpectra = []; %to choose whether spectrum data is saved
-param.stretchedNoise = []; %correction particular to interpolated DSLM data
+param.stretchedNoise = true; %correction particular to interpolated DSLM data
 
 
 obj = cellshapefft(param);

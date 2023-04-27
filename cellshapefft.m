@@ -250,7 +250,7 @@ classdef cellshapefft < handle
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords; %intentional, ignore the yellow suggestions
 
-                        parfor c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
+                        for c = time_lims(1):time_lims(2) %main parfor (substitute 'for' for debugging only)
                             %per timepoint
                             if ~isempty(param.contour)
                                 tileCoords_c=tileCoords(:,:,c);
