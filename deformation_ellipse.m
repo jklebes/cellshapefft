@@ -1,4 +1,4 @@
-function abphi =deformation_ellipse(param, spectra, nTiles)
+function [quality,abphi] =deformation_ellipse(param, spectra, nTiles)
 % results = def size_analysis(obj.param,results)
 % Function that computes the ellipse for the siz representation
 % on each averaged subimage,  fills the im_regav structure with the fields
@@ -8,12 +8,14 @@ function abphi =deformation_ellipse(param, spectra, nTiles)
 %--------------------------------------------------------------------------
 
 abphi = zeros(3,nTiles);
+quality=zeros([1 nTiles]);
 for re = 1:nTiles     % for each region
     if sum(sum(spectra(:,:,re)))==0 % if the spectrum is empty
         abphi(:,re)= [0;0;0];
-
+        quality(re)=0;
     else
-        [a b phi] = size_def(spectra(:,:,re),param);
+        [a, b, phi] = size_def(spectra(:,:,re),param);
+        quality(re)=mean(spectra(:,:,re), 'all');
         abphi(:,re) = [a b phi];
         % then compute
         % the cell size

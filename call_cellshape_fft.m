@@ -5,10 +5,10 @@ addpath(genpath("..")); %folder utilities is expected to be sister directory
 % create an analysis_object rA and call its cellshapeft function
 
 param = struct();
-param.pathin = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\Confocal\myosin';
+param.pathin = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\cable detection\exp0186\focused_one';
 param.contour = [];%'\\lfs.lifesci.dundee.ac.uk\lfs\cjw\DSLM_expk\expk0245\0011_mask\mask';
-param.pathout = '\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\Confocal\';
-%param.pathout = ['\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\expk0699\results_actin_', char(datetime('now', Format='dd-MM-yyyy''_''HH-mm-ss'))];
+param.pathout = ['\\lfs.lifesci.dundee.ac.uk\lfs\cjw\Jason\cable detection\exp0186\results_actin_', ...
+    char(datetime('now', Format='dd-MM-yyyy''_''HH-mm-ss'))];
 
 %insert your ffmpeg path here if it's not just command 'ffmpeg'
 if ispc
@@ -19,26 +19,25 @@ else
     param.ffmpeg_path = [];
 end
 
-param.time_points = [];
+param.timePoints = [1:48];
 param.time_avg = 1;
-param.method = []; %choose between ellipse-fitting and inertia matrix
-                   %analysis (see paper). "ellipse", "matrix", or "radon"
+param.method = 'matrix'; %choose between ellipse-fitting and inertia matrix
+                  %analysis (see paper). "ellipse", "matrix"
 param.workers = 16;
 param.chunk_size = 96; %ideally multiple of number of workers
-
-param.tileSize = []; %size of tiles.
-param.overlap= [];
-param.cut = []; %masking a circle in the middle of Fourier spectrum
-param.propor = []; 
-param.sigma = [];
-param.strel = [];
-
+param.tileSize = 100; %size of tiles.
+param.overlap= 0.5;
+param.cut = 5; %masking a circle in the middle of Fourier spectrum
+param.propor = 0.02; 
+param.sigma = 0.8;
+param.strel = 4;
 %scale, color of lines to draw in visualization:
-param.scale = 300;
-param.col='green';
+param.scale = [];
+param.col='green'; 
 
 param.writeSpectra = []; %to choose whether spectrum data is saved
+param.stretchedNoise = []; %correction particular to interpolated DSLM data
+
 
 obj = cellshapefft(param);
-obj.full_analysis;
-% obj.full_analysis;
+obj.full_analysis();

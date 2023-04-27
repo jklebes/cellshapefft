@@ -21,9 +21,9 @@ if isempty(param.contour)                  % portion of code when a mask is not 
     for win = 1:nTiles    % for each subimage of the image
         x = tileCoords(win,1);  % get positionin x and y
         y = tileCoords(win,2);
-        FT = fftTile(a(y:y+param.tileSize-1,x:x+param.tileSize-1), param.sigma); % perform FT analysis
+        FT = fftTile(a(y:y+param.tileSize-1,x:x+param.tileSize-1), param.sigma,param.stretchedNoise); % perform FT analysis
         %quality(win)=signalToNoise(a(y:y+param.tileSize-1,x:x+param.tileSize-1), 4);
-        start= floor(3/8*param.tileSize);  % return the middle 1/2 only
+        start= 0;%floor(3/8*param.tileSize);  % return the middle 1/2 only
         spectra(:,:, win)= FT(start+1:start+spectsize,start+1:start+spectsize);
     end
 
@@ -44,7 +44,7 @@ else                                           % when a mask is required
                 <=0.70*param.tileSize^2 % Condition on the intensity of the subimages, ie: get rid of borders
             % if condition not held, spectrum remains a zeros matrix
         else
-            FT = fftTile(a(y:y+param.tileSize-1,x:x+param.tileSize-1), param.stripe_sigma);
+            FT = fftTile(a(y:y+param.tileSize-1,x:x+param.tileSize-1), param.stripe_sigma, param.stretchedNoise);
             quality(:,win)=mean_intensity(a(y:y+param.tileSize-1,x:x+param.tileSize-1));
             start= floor(3/8*param.tileSize);
             spectra(:,:, win)=FT(start+1:start+spectsize,start+1:start+spectsize);
@@ -53,7 +53,7 @@ else                                           % when a mask is required
 end
 end
 
-function [abs_im_fft] = fftTile(im, sigma)
+function [abs_im_fft] = fftTile(im, sigma, stretchedNoise)
             % function that computes the FT of an image
 
             %--------------------------------------------------------------------------
@@ -71,16 +71,18 @@ function [abs_im_fft] = fftTile(im, sigma)
                 abs_im_fft = abs(fftshift(fftn(p))); % takes the modulus
                 [~,ind]=max(abs_im_fft(:));     % finds index of the max = center
                 
-                if ~isempty(sigma)
-                    abs_im_fft=imgaussfilt(abs_im_fft, sigma); %blurring of Fourier space image
-                end
+                
                 abs_im_fft(ind) = 0;            % puts center to zero
                 siz=size(abs_im_fft,1);
-                
+
                 abs_im_fft = abs_im_fft/numel(im); %normalize by tile area to make
                 %fft spectrum values indicative of tile avg intensity,
                 %independent of tile size
 
+                if ~isempty(sigma)
+                    abs_im_fft=imgaussfilt(abs_im_fft, sigma); %blurring of Fourier space image
+                end
+                if stretchedNoise
                 %% the profile-subtracting correction!
                 %need a tile-size-independent way to figure out where to
                 %cut for top and bottom regions that are definitely just
@@ -88,7 +90,7 @@ function [abs_im_fft] = fftTile(im, sigma)
                 top_bottom=[abs_im_fft(1:round(siz/8)+1,:);abs_im_fft(end-round(siz/8):end,:)];
                 col_means = mean(top_bottom, 1);
                 abs_im_fft =abs_im_fft-col_means;
-
+                end
                 
 
             end

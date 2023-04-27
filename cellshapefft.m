@@ -139,6 +139,10 @@ classdef cellshapefft < handle
                 param.workers = 4;  % cores for parallel computation
             end
 
+            if isempty(param.stretchedNoise)
+                param.stretchedNoise = false; %not generally applicable
+            end
+
 
             obj.param = param;
             mkdir(obj.param.pathout);
@@ -217,7 +221,8 @@ classdef cellshapefft < handle
             obj.Position();               % register positions of each subimages
             %TODO could make part of parallel loop, esp in case with mask
 
-            spectsize=ceil(obj.param.tileSize/4);
+            %spectsize=ceil(obj.param.tileSize/4);
+            spectsize=obj.param.tileSize;
             %obj.im_regav = repmat(struct(repmat(struct('S',[]...
             %    ,'angS',[],'a',[],'b',[],'phi',[]),max(obj.nTiles),1)),1,obj.param.nTime);
             % Initialization of the structure im_regav, containing spectrums
@@ -239,7 +244,7 @@ classdef cellshapefft < handle
                     %chunked
                     for t_ind = time_vector(1:obj.param.chunk_size:end)
                         time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
-                        if param.writeSpectra
+                        if obj.param.writeSpectra
                             spectra_chunk=zeros([spectsize, spectsize, resultsdims(1), obj.param.chunk_size]);
                         end
                         param=obj.param; %take a copy of the structs to send to each worker
@@ -262,7 +267,7 @@ classdef cellshapefft < handle
                             end
                             [ quality(:, c),inertia_matrix(:,:,:,c)]= inertia_matp_sigma(param, spectra, nTiles);  % compute cell orientation subimages
                         end %first parfor
-                        if param.writeSpectra
+                        if obj.param.writeSpectra
                             save([obj.param.pathout filesep 'spectra_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'spectra_chunk', '-v7.3');
                         end
                     end
@@ -276,6 +281,7 @@ classdef cellshapefft < handle
 
                     for t_ind = time_vector(1:obj.param.chunk_size:end) %another chunked process
                         time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+                        
                         %parfor to process and visualize
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords;
@@ -303,6 +309,9 @@ classdef cellshapefft < handle
                     %chunk
                     for t_ind = time_vector(1:obj.param.chunk_size:end)
                         time_lims = [t_ind min(t_ind+obj.param.chunk_size-1, time_vector(end))];
+                        if obj.param.writeSpectra
+                            spectra_chunk=zeros([spectsize, spectsize, resultsdims(1), obj.param.chunk_size]);
+                        end
 
                         param=obj.param; %take a copy of the structs to send to each worker
                         tileCoords = obj.tileCoords; %intentional, ignore the yellow suggestions
@@ -319,7 +328,13 @@ classdef cellshapefft < handle
                             data=param.reader.stack(c);
                             spectra=spectrum_analysis(param, data, nTiles, tileCoords_c, spectsize, c);        % compute spectrums of subimages
                             %here save spectra in chunks if applicable
+                            if param.writeSpectra
+                                spectra_chunk(:,:,:,c)=spectra;
+                            end
                             [ quality(:, c),abphi(:,:,c)] = deformation_ellipse(param, spectra, nTiles);  % compute cell orientation subimages
+                        end
+                         if obj.param.writeSpectra
+                            save([obj.param.pathout filesep 'spectra_' num2str(time_lims(1),'%04d') '_' num2str(time_lims(2),'%04d') '.mat'], 'spectra_chunk', '-v7.3');
                         end
                     end
 
@@ -345,7 +360,7 @@ classdef cellshapefft < handle
                             end
                             visualization_ellipse(param, abphi, quality(:,c), tileCoords_c, nTiles, out_folder, c); % create maps of cell orientations
                         end
-                        obj.save_chunk(abphi, time_lims)    % save results (time-averaged)
+                        obj.save_chunk(abphi, 'abphi', time_lims)    % save results (time-averaged)
                     end
                 case "radon"
                     disp("radon method not yet implemented")
@@ -373,14 +388,13 @@ classdef cellshapefft < handle
             % This function registers the positions of each subimage at each
             % time, and the number of subimage at each time. The nTiles and tileCoords fields
             % of the Result structure are filled.
-            disp('Registering...');
 
-            overlap = floor((1-obj.param.overlap)*obj.param.tileSize); % number of shared pixels between
-            % subimages
+            overlapPixels= floor((1-obj.param.overlap)*obj.param.tileSize);
+            % number of shared pixels between subimages
 
             if isempty(obj.param.contour)                  % if no mask is required
-                x = 1:overlap:(obj.param.siz(1)- obj.param.tileSize+1);
-                y = 1:overlap:(obj.param.siz(2)- obj.param.tileSize+1);
+                x = 1:overlapPixels:(obj.param.siz(1)- obj.param.tileSize+1);
+                y = 1:overlapPixels:(obj.param.siz(2)- obj.param.tileSize+1);
                 [X,Y] = meshgrid(x,y);
                 positions = [X(:) Y(:)];
                 obj.nTiles=size(positions,1) ;
@@ -396,8 +410,8 @@ classdef cellshapefft < handle
                     b = obj.param.contour_reader.readSpecificImage(obj.param.timePoints(t)); % load mask images
                     b = im2double(b);
 
-                    x = 1:overlap:(obj.param.siz(1)- obj.param.tileSize+1);
-                    y = 1:overlap:(obj.param.siz(2)- obj.param.tileSize+1);
+                    x = 1:overlapPixels:(obj.param.siz(1)- obj.param.tileSize+1);
+                    y = 1:overlapPixels:(obj.param.siz(2)- obj.param.tileSize+1);
                     [X,Y] = meshgrid(x,y);
 
                     mask = imresize(b, size(X))>=0.5;
