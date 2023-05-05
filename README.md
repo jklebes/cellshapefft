@@ -43,6 +43,7 @@ Modifications Jason Klebes (2023)
 * integrating our expReader, should work as installed from github with sister projects (utilities).
 * renamed confusing variables
 * color-coding outputs by "quality" (avg Fourier space intensity)
+* Rearrange for parfor loops
 
 ## Getting Started
 
