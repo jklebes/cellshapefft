@@ -53,7 +53,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 A directory of images of cells over time.
 Images cen be .png , .tiff .tif , .jpg .jpeg, .jp2.
-Because of expReader, there should be at least five images with numbered names in the same format, 
+Because of expReader, there should be at least five images with numbered names of the same length and pattern, 
 for example "img_0001.png", "img_0002.png", ... .
 
 ### Installing
