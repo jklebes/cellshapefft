@@ -64,7 +64,7 @@ for example "img_0001.png", "img_0002.png", ... .
 
 ### How to use it in practice
 To run the code:
-* The file to execute is ``call_cellshape_fft.m``.  Inside this file, we create the ``param`` struct holding all user input paramteres and an object ``cellshapefft``. If empty, default values, which can be seen in ``cellshapefft.m``, will be used. We then initialize a ``cellshapefft`` object and run the analysis by calling method "full_analysis".
+* The file to execute is ``call_cellshape_fft.m``.  Inside this file, we create the ``param`` struct holding all user input paramteres and an object ``cellshapefft``. For fields set to empty, default values, which can be seen in ``cellshapefft.m``, will be used. We then initialize a ``cellshapefft`` object and run the analysis by calling method "full_analysis".
         
 ```
     Example:
